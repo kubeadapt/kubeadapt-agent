@@ -1,0 +1,22 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-push-deploy:
+    uses: kubeadapt/actions/.github/workflows/aws-golang-private-service.yml@main
+    with:
+      ecr_repository_name: kubeadapt/app/${{ github.event.repository.name }}
+      helm_chart_name: ${{ github.event.repository.name }}
+      aws_role_to_assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
+    secrets:
+      PLATFORM_ASSISTANT_GH_APP_ID: ${{ secrets.PLATFORM_ASSISTANT_GH_APP_ID }}
+      PLATFORM_ASSISTANT_GH_APP_PRIVATE_KEY: ${{ secrets.PLATFORM_ASSISTANT_GH_APP_PRIVATE_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
