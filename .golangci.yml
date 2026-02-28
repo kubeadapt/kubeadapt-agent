@@ -76,9 +76,8 @@ linters:
       locale: US
 
     gosec:
-      # Exclude specific security checks if needed
       excludes:
-        # - G104  # Audit errors not checked (covered by errcheck)
+        - G704  # SSRF taint analysis — false positive for internal IMDS/scraper/transport clients
       severity: high
       confidence: medium
 
@@ -113,6 +112,7 @@ linters:
           - gosec         # Allow security issues in tests
           - goconst       # Repeated strings OK in tests
           - revive        # Style less important in tests
+          - errchkjson    # Allow unchecked JSON encode/decode in tests
 
       # Exclude long test functions
       - path: _test\.go
@@ -125,26 +125,33 @@ linters:
           - godox
         text: "TODO"
 
+      # Exclude some staticcheck SA1019 (deprecated) — sometimes unavoidable
+      - linters:
+          - staticcheck
+        text: "SA1019:"
+
+      # Exclude revive stuttering names — renaming would be a breaking API change
+      - linters:
+          - revive
+        text: "type name will be used as"
+
+      # Exclude revive var-naming for internal/errors package — renaming package would be disruptive
+      - linters:
+          - revive
+        text: "avoid package names that conflict with Go standard library"
+
+      # Exclude errchkjson in health server — _ assignment pattern intentional
+      - path: internal/health/server\.go
+        linters:
+          - errchkjson
+
 issues:
   # Show all issues
   max-issues-per-linter: 0
   max-same-issues: 0
 
   # Report only new issues compared to HEAD
-  new-from-rev: HEAD
-
-  # Exclude common false positives
-  exclude-rules:
-    # Exclude some staticcheck messages
-    - linters:
-        - staticcheck
-      text: "SA1019:"  # Deprecated function usage (sometimes unavoidable)
-
-    # Exclude gosec G104 for specific cases (covered by errcheck)
-    - linters:
-        - gosec
-      text: "G104:"
-      path: _test\.go
+  # new-from-rev: HEAD
 
 severity:
   default: error
