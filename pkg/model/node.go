@@ -21,7 +21,10 @@ type NodeInfo struct {
 	PodCIDRs      []string `json:"pod_cidrs"`
 	OSImage       string   `json:"os_image"`
 	KernelVersion string   `json:"kernel_version"`
-
+	// KubeProxyVersion is deprecated in the Kubernetes API (NodeSystemInfo.KubeProxyVersion)
+	// but retained here for API compatibility. There is no replacement field in NodeSystemInfo;
+	// the accurate alternative requires reading the kube-proxy DaemonSet image tag separately.
+	KubeProxyVersion            string  `json:"kube_proxy_version"`
 	CPUCapacityCores            float64 `json:"cpu_capacity_cores"`
 	MemoryCapacityBytes         int64   `json:"memory_capacity_bytes"`
 	EphemeralStorageBytes       int64   `json:"ephemeral_storage_bytes"`
