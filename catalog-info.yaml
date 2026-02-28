@@ -1,0 +1,92 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: kubeadapt-agent
+  description: "Lightweight Kubernetes resource metrics collector agent"
+  annotations:
+    github.com/project-slug: kubeadapt/kubeadapt-agent
+    backstage.io/techdocs-ref: dir:.
+    backstage.io/adr-location: docs/adrs
+    backstage.io/source-template: template:default/create-public-service-infra
+    argocd/app-name: kubeadapt-agent
+    backstage.io/kubernetes-id: kubeadapt-agent
+    backstage.io/kubernetes-namespace: saas
+    terasky.backstage.io/crossplane-cluster: kubeadapt-eks
+    terasky.backstage.io/crossplane-resource: publicserviceinfras.platform.kubeadapt.io
+    terasky.backstage.io/crossplane-version: v2
+    terasky.backstage.io/composite-name: kubeadapt-agent-cd5rg
+    terasky.backstage.io/composite-group: platform.kubeadapt.io
+    terasky.backstage.io/composite-version: v1alpha1
+    terasky.backstage.io/composite-plural: publicserviceinfras
+    terasky.backstage.io/composite-kind: PublicServiceInfra
+    terasky.backstage.io/crossplane-scope: Cluster
+    terasky.backstage.io/composition-name: publicserviceinfra-composition
+  tags:
+    - golang
+    - crossplane
+    - kubeadapt
+    - public
+  links:
+    - url: https://github.com/kubeadapt/kubeadapt-agent
+      title: GitHub Repository
+      icon: github
+spec:
+  type: service
+  lifecycle: production
+  owner: group:default/core
+  system: kubeadapt-platform
+  dependsOn:
+    - resource:default/kubeadapt-agent-github-repo
+    - resource:default/kubeadapt-agent-ecr-public
+    - resource:default/kubeadapt-agent-github-oidc-role
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: kubeadapt-agent-github-repo
+  description: "GitHub repository for kubeadapt-agent"
+  tags:
+    - github
+    - repository
+    - crossplane
+    - public
+spec:
+  type: github-repository
+  owner: group:default/core
+  system: kubeadapt-platform
+  dependencyOf:
+    - component:default/kubeadapt-agent
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: kubeadapt-agent-ecr-public
+  description: "ECR Public repository for kubeadapt-agent"
+  tags:
+    - ecr-public
+    - aws
+    - crossplane
+    - public
+spec:
+  type: container-registry
+  owner: group:default/core
+  system: kubeadapt-platform
+  dependencyOf:
+    - component:default/kubeadapt-agent
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: kubeadapt-agent-github-oidc-role
+  description: "GitHub Actions OIDC IAM role for kubeadapt-agent CI/CD"
+  tags:
+    - iam
+    - aws
+    - crossplane
+    - public
+spec:
+  type: iam-role
+  owner: group:default/core
+  system: kubeadapt-platform
+  dependencyOf:
+    - component:default/kubeadapt-agent
