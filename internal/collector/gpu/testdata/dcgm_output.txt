@@ -1,0 +1,49 @@
+# HELP DCGM_FI_DEV_GPU_UTIL GPU utilization (in %).
+# TYPE DCGM_FI_DEV_GPU_UTIL gauge
+DCGM_FI_DEV_GPU_UTIL{gpu="0",UUID="GPU-aaaa-bbbb-cccc",device="nvidia0",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",container="trainer",namespace="ml",pod="train-job-abc"} 78
+DCGM_FI_DEV_GPU_UTIL{gpu="1",UUID="GPU-dddd-eeee-ffff",device="nvidia1",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",container="",namespace="",pod=""} 22
+# HELP DCGM_FI_PROF_GR_ENGINE_ACTIVE Ratio of time the graphics engine is active.
+# TYPE DCGM_FI_PROF_GR_ENGINE_ACTIVE gauge
+DCGM_FI_PROF_GR_ENGINE_ACTIVE{gpu="1",UUID="GPU-dddd-eeee-ffff",device="nvidia1",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",container_name="model",pod_namespace="serving",pod_name="inference-xyz"} 0.65
+# HELP DCGM_FI_DEV_FB_USED Framebuffer memory used (in MiB).
+# TYPE DCGM_FI_DEV_FB_USED gauge
+DCGM_FI_DEV_FB_USED{gpu="0",UUID="GPU-aaaa-bbbb-cccc",device="nvidia0",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",container="trainer",namespace="ml",pod="train-job-abc"} 40960
+DCGM_FI_DEV_FB_USED{gpu="1",UUID="GPU-dddd-eeee-ffff",device="nvidia1",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",container_name="model",pod_namespace="serving",pod_name="inference-xyz"} 16384
+# HELP DCGM_FI_DEV_FB_FREE Framebuffer memory free (in MiB).
+# TYPE DCGM_FI_DEV_FB_FREE gauge
+DCGM_FI_DEV_FB_FREE{gpu="0",UUID="GPU-aaaa-bbbb-cccc",device="nvidia0",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",container="trainer",namespace="ml",pod="train-job-abc"} 40960
+DCGM_FI_DEV_FB_FREE{gpu="1",UUID="GPU-dddd-eeee-ffff",device="nvidia1",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",container_name="model",pod_namespace="serving",pod_name="inference-xyz"} 65536
+# HELP DCGM_FI_DEV_FB_TOTAL Total framebuffer memory (in MiB).
+# TYPE DCGM_FI_DEV_FB_TOTAL gauge
+DCGM_FI_DEV_FB_TOTAL{gpu="0",UUID="GPU-aaaa-bbbb-cccc",device="nvidia0",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",container="trainer",namespace="ml",pod="train-job-abc"} 81920
+DCGM_FI_DEV_FB_TOTAL{gpu="1",UUID="GPU-dddd-eeee-ffff",device="nvidia1",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",container_name="model",pod_namespace="serving",pod_name="inference-xyz"} 81920
+# HELP DCGM_FI_DEV_GPU_TEMP GPU temperature (in C).
+# TYPE DCGM_FI_DEV_GPU_TEMP gauge
+DCGM_FI_DEV_GPU_TEMP{gpu="0",UUID="GPU-aaaa-bbbb-cccc",device="nvidia0",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",container="trainer",namespace="ml",pod="train-job-abc"} 72
+DCGM_FI_DEV_GPU_TEMP{gpu="1",UUID="GPU-dddd-eeee-ffff",device="nvidia1",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",container_name="model",pod_namespace="serving",pod_name="inference-xyz"} 58
+# HELP DCGM_FI_DEV_POWER_USAGE Power draw (in W).
+# TYPE DCGM_FI_DEV_POWER_USAGE gauge
+DCGM_FI_DEV_POWER_USAGE{gpu="0",UUID="GPU-aaaa-bbbb-cccc",device="nvidia0",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",container="trainer",namespace="ml",pod="train-job-abc"} 285.7
+DCGM_FI_DEV_POWER_USAGE{gpu="1",UUID="GPU-dddd-eeee-ffff",device="nvidia1",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",container_name="model",pod_namespace="serving",pod_name="inference-xyz"} 195.2
+# HELP DCGM_FI_DEV_MIG_MODE MIG mode (0: disabled, 1: enabled).
+# TYPE DCGM_FI_DEV_MIG_MODE gauge
+DCGM_FI_DEV_MIG_MODE{gpu="0",UUID="GPU-aaaa-bbbb-cccc",device="nvidia0",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",container="trainer",namespace="ml",pod="train-job-abc"} 0
+DCGM_FI_DEV_MIG_MODE{gpu="1",UUID="GPU-dddd-eeee-ffff",device="nvidia1",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",container_name="model",pod_namespace="serving",pod_name="inference-xyz"} 0
+# HELP DCGM_FI_DEV_GPU_UTIL GPU utilization for MIG instances.
+# TYPE DCGM_FI_DEV_GPU_UTIL gauge
+DCGM_FI_DEV_GPU_UTIL{gpu="2",UUID="GPU-1111-2222-3333",device="nvidia2",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",GPU_I_PROFILE="1g.10gb",GPU_I_ID="0",container="mig-worker",namespace="ml",pod="mig-job-001"} 92
+# HELP DCGM_FI_DEV_FB_USED Framebuffer memory used for MIG instances (in MiB).
+# TYPE DCGM_FI_DEV_FB_USED gauge
+DCGM_FI_DEV_FB_USED{gpu="2",UUID="GPU-1111-2222-3333",device="nvidia2",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",GPU_I_PROFILE="1g.10gb",GPU_I_ID="0",container="mig-worker",namespace="ml",pod="mig-job-001"} 8192
+# HELP DCGM_FI_DEV_FB_TOTAL Total framebuffer for MIG instance (in MiB).
+# TYPE DCGM_FI_DEV_FB_TOTAL gauge
+DCGM_FI_DEV_FB_TOTAL{gpu="2",UUID="GPU-1111-2222-3333",device="nvidia2",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",GPU_I_PROFILE="1g.10gb",GPU_I_ID="0",container="mig-worker",namespace="ml",pod="mig-job-001"} 10240
+# HELP DCGM_FI_DEV_GPU_TEMP GPU temperature for MIG instance (in C).
+# TYPE DCGM_FI_DEV_GPU_TEMP gauge
+DCGM_FI_DEV_GPU_TEMP{gpu="2",UUID="GPU-1111-2222-3333",device="nvidia2",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",GPU_I_PROFILE="1g.10gb",GPU_I_ID="0",container="mig-worker",namespace="ml",pod="mig-job-001"} 68
+# HELP DCGM_FI_DEV_POWER_USAGE Power draw for MIG instance (in W).
+# TYPE DCGM_FI_DEV_POWER_USAGE gauge
+DCGM_FI_DEV_POWER_USAGE{gpu="2",UUID="GPU-1111-2222-3333",device="nvidia2",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",GPU_I_PROFILE="1g.10gb",GPU_I_ID="0",container="mig-worker",namespace="ml",pod="mig-job-001"} 75.0
+# HELP DCGM_FI_DEV_MIG_MODE MIG mode for GPU 2.
+# TYPE DCGM_FI_DEV_MIG_MODE gauge
+DCGM_FI_DEV_MIG_MODE{gpu="2",UUID="GPU-1111-2222-3333",device="nvidia2",modelName="NVIDIA A100-SXM4-80GB",Hostname="gpu-node-1",DCGM_FI_DRIVER_VERSION="535.104.12",GPU_I_PROFILE="1g.10gb",GPU_I_ID="0",container="mig-worker",namespace="ml",pod="mig-job-001"} 1
