@@ -17,11 +17,10 @@ type NodeInfo struct {
 	KubeletVersion   string `json:"kubelet_version"`
 	ContainerRuntime string `json:"container_runtime"`
 
-	PodCIDR          string   `json:"pod_cidr"`
-	PodCIDRs         []string `json:"pod_cidrs"`
-	OSImage          string   `json:"os_image"`
-	KernelVersion    string   `json:"kernel_version"`
-	KubeProxyVersion string   `json:"kube_proxy_version"`
+	PodCIDR       string   `json:"pod_cidr"`
+	PodCIDRs      []string `json:"pod_cidrs"`
+	OSImage       string   `json:"os_image"`
+	KernelVersion string   `json:"kernel_version"`
 
 	CPUCapacityCores            float64 `json:"cpu_capacity_cores"`
 	MemoryCapacityBytes         int64   `json:"memory_capacity_bytes"`

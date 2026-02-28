@@ -40,11 +40,10 @@ func NodeToModel(node *corev1.Node) model.NodeInfo {
 		KubeletVersion:   node.Status.NodeInfo.KubeletVersion,
 		ContainerRuntime: node.Status.NodeInfo.ContainerRuntimeVersion,
 
-		PodCIDR:          node.Spec.PodCIDR,
-		PodCIDRs:         node.Spec.PodCIDRs,
-		OSImage:          node.Status.NodeInfo.OSImage,
-		KernelVersion:    node.Status.NodeInfo.KernelVersion,
-		KubeProxyVersion: node.Status.NodeInfo.KubeProxyVersion,
+		PodCIDR:       node.Spec.PodCIDR,
+		PodCIDRs:      node.Spec.PodCIDRs,
+		OSImage:       node.Status.NodeInfo.OSImage,
+		KernelVersion: node.Status.NodeInfo.KernelVersion,
 
 		// Capacity
 		CPUCapacityCores:            ParseQuantity(node.Status.Capacity[corev1.ResourceCPU]),
