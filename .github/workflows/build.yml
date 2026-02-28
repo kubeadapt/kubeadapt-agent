@@ -1,4 +1,4 @@
-name: Build & Deploy
+name: Build & Push
 
 on:
   push:
@@ -9,11 +9,10 @@ permissions:
   contents: read
 
 jobs:
-  build-push-deploy:
-    uses: kubeadapt/actions/.github/workflows/aws-golang-private-service.yml@main
+  build-and-push:
+    uses: kubeadapt/actions/.github/workflows/aws-golang-public-service.yml@main
     with:
       ecr_repository_name: kubeadapt/app/${{ github.event.repository.name }}
-      helm_chart_name: ${{ github.event.repository.name }}
       aws_role_to_assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
     secrets:
       PLATFORM_ASSISTANT_GH_APP_ID: ${{ secrets.PLATFORM_ASSISTANT_GH_APP_ID }}
