@@ -44,7 +44,8 @@ func NodeToModel(node *corev1.Node) model.NodeInfo {
 		PodCIDRs:      node.Spec.PodCIDRs,
 		OSImage:       node.Status.NodeInfo.OSImage,
 		KernelVersion: node.Status.NodeInfo.KernelVersion,
-
+		//nolint:staticcheck // SA1019: KubeProxyVersion is deprecated; no replacement exists in NodeSystemInfo.
+		KubeProxyVersion: node.Status.NodeInfo.KubeProxyVersion,
 		// Capacity
 		CPUCapacityCores:            ParseQuantity(node.Status.Capacity[corev1.ResourceCPU]),
 		MemoryCapacityBytes:         quantityValue(node.Status.Capacity, corev1.ResourceMemory),
