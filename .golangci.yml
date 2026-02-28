@@ -3,7 +3,7 @@ version: "2"
 run:
   timeout: 5m
   tests: true
-  go: "1.25"
+  go: "1.26"
   concurrency: 4
   # Skip vendor and generated code
   skip-dirs:
@@ -125,10 +125,11 @@ linters:
           - godox
         text: "TODO"
 
-      # Exclude some staticcheck SA1019 (deprecated) — sometimes unavoidable
-      - linters:
+      # Exclude SA1019 deprecated NewSimpleClientset in test files — no stable replacement for k8s fake client yet
+      - path: _test\.go
+        linters:
           - staticcheck
-        text: "SA1019:"
+        text: "SA1019:.*NewSimpleClientset is deprecated"
 
       # Exclude revive stuttering names — renaming would be a breaking API change
       - linters:
