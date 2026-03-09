@@ -23,6 +23,13 @@ type Config struct {
 	HealthPort           int
 	AgentVersion         string
 
+	// Kubernetes pod metadata (injected via Helm downward API)
+	ChartVersion    string // KUBEADAPT_CHART_VERSION
+	HelmReleaseName string // HELM_RELEASE_NAME
+	PodName         string // POD_NAME
+	PodNamespace    string // POD_NAMESPACE
+	NodeName        string // NODE_NAME
+
 	// Security
 	AllowInsecure    bool // KUBEADAPT_ALLOW_INSECURE, default: false — allows http:// BackendURL
 	DebugEndpoints   bool // KUBEADAPT_DEBUG_ENDPOINTS, default: false — enables pprof/debug on health port
@@ -52,6 +59,12 @@ func Load() Config {
 		BufferMaxBytes:       parseInt64("KUBEADAPT_BUFFER_MAX_BYTES", 52428800),
 		HealthPort:           parseInt("KUBEADAPT_HEALTH_PORT", 8080),
 	}
+
+	cfg.ChartVersion = os.Getenv("KUBEADAPT_CHART_VERSION")
+	cfg.HelmReleaseName = os.Getenv("HELM_RELEASE_NAME")
+	cfg.PodName = os.Getenv("POD_NAME")
+	cfg.PodNamespace = os.Getenv("POD_NAMESPACE")
+	cfg.NodeName = os.Getenv("NODE_NAME")
 
 
 	cfg.AllowInsecure = parseBool("KUBEADAPT_ALLOW_INSECURE", false)

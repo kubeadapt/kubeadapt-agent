@@ -172,4 +172,11 @@ type AgentHealth struct {
 	QuotaIsWithin   bool    `json:"quota_is_within"`
 
 	CollectedAt int64 `json:"collected_at"`
+
+	// Kubernetes pod metadata
+	ChartVersion    string `json:"chart_version,omitempty"`
+	HelmReleaseName string `json:"helm_release_name,omitempty"`
+	PodName         string `json:"pod_name,omitempty"`
+	PodNamespace    string `json:"pod_namespace,omitempty"`
+	NodeName        string `json:"node_name,omitempty"`
 }

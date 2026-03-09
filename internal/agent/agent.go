@@ -304,4 +304,11 @@ func (a *Agent) populateHealth(snap *model.ClusterSnapshot) {
 	h.UptimeSeconds = int64(time.Since(a.startedAt) / time.Second)
 	h.StartedAt = a.startedAt.UnixMilli()
 	h.CollectedAt = time.Now().UnixMilli()
+
+	// Kubernetes pod metadata (from env vars injected by Helm).
+	h.ChartVersion = a.config.ChartVersion
+	h.HelmReleaseName = a.config.HelmReleaseName
+	h.PodName = a.config.PodName
+	h.PodNamespace = a.config.PodNamespace
+	h.NodeName = a.config.NodeName
 }
