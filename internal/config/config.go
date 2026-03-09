@@ -39,9 +39,9 @@ type Config struct {
 // with defaults applied for any unset values.
 func Load() Config {
 	cfg := Config{
-		APIKey:               os.Getenv("KUBEADAPT_API_KEY"),
+		APIKey:               envOrFallback("KUBEADAPT_API_KEY", "KUBEADAPT_AGENT_TOKEN"),
 		ClusterName:          os.Getenv("KUBEADAPT_CLUSTER_NAME"),
-		BackendURL:           envOrDefault("KUBEADAPT_BACKEND_URL", "https://api.kubeadapt.io"),
+		BackendURL:           envOrFallbackOrDefault("KUBEADAPT_BACKEND_URL", "KUBEADAPT_BACKEND_API_ENDPOINT", "https://api.kubeadapt.io"),
 		SnapshotInterval:     parseDuration("KUBEADAPT_SNAPSHOT_INTERVAL", 60*time.Second),
 		MetricsInterval:      parseDuration("KUBEADAPT_METRICS_INTERVAL", 60*time.Second),
 		InformerResyncPeriod: parseDuration("KUBEADAPT_INFORMER_RESYNC", 300*time.Second),
@@ -68,6 +68,26 @@ func Load() Config {
 
 func envOrDefault(key, defaultVal string) string {
 	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return defaultVal
+}
+
+// envOrFallback tries the primary key first, then falls back to the fallback key.
+// Returns empty string if neither is set.
+func envOrFallback(primary, fallback string) string {
+	if v := os.Getenv(primary); v != "" {
+		return v
+	}
+	return os.Getenv(fallback)
+}
+
+// envOrFallbackOrDefault tries the primary key, then fallback key, then default value.
+func envOrFallbackOrDefault(primary, fallback, defaultVal string) string {
+	if v := os.Getenv(primary); v != "" {
+		return v
+	}
+	if v := os.Getenv(fallback); v != "" {
 		return v
 	}
 	return defaultVal
