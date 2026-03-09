@@ -100,10 +100,11 @@ func TestParseResponse_200(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL)
+	resp, err := http.Get(srv.URL) //nolint:bodyclose // closed below
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	defer resp.Body.Close()
 
 	result, err := ParseResponse(resp)
 	if err != nil {
@@ -123,10 +124,11 @@ func TestParseResponse_401(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL)
+	resp, err := http.Get(srv.URL) //nolint:bodyclose // closed below
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	defer resp.Body.Close()
 
 	_, err = ParseResponse(resp)
 	if err == nil {
@@ -147,10 +149,11 @@ func TestParseResponse_402_QuotaExceeded(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL)
+	resp, err := http.Get(srv.URL) //nolint:bodyclose // closed below
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	defer resp.Body.Close()
 
 	_, err = ParseResponse(resp)
 	if err == nil {
@@ -168,10 +171,11 @@ func TestParseResponse_410_Deprecated(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL)
+	resp, err := http.Get(srv.URL) //nolint:bodyclose // closed below
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	defer resp.Body.Close()
 
 	_, err = ParseResponse(resp)
 	if err == nil {
@@ -185,10 +189,11 @@ func TestParseResponse_5xx(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL)
+	resp, err := http.Get(srv.URL) //nolint:bodyclose // closed below
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	defer resp.Body.Close()
 
 	_, err = ParseResponse(resp)
 	if err == nil {

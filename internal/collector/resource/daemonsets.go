@@ -41,13 +41,15 @@ func NewDaemonSetCollector(client kubernetes.Interface, s *store.Store, m *obser
 	}
 }
 
+// Name implements collector.Collector.
 func (c *DaemonSetCollector) Name() string { return "daemonsets" }
 
+// Start implements collector.Collector.
 func (c *DaemonSetCollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Apps().V1().DaemonSets().Informer()
 
-	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			ds, ok := obj.(*appsv1.DaemonSet)
 			if !ok {
@@ -84,7 +86,9 @@ func (c *DaemonSetCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("daemonsets", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("daemonsets").Set(float64(c.store.DaemonSets.Len()))
 		},
-	})
+	}); err != nil {
+		return fmt.Errorf("%s: add event handler: %w", c.Name(), err)
+	}
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -93,6 +97,7 @@ func (c *DaemonSetCollector) Start(_ context.Context) error {
 	return nil
 }
 
+// WaitForSync implements collector.Collector.
 func (c *DaemonSetCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("daemonsets informer cache sync failed")
@@ -100,6 +105,7 @@ func (c *DaemonSetCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
+// Stop implements collector.Collector.
 func (c *DaemonSetCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

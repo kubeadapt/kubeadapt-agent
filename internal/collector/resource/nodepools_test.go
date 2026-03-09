@@ -23,7 +23,7 @@ func newNodePoolTestEnv(t *testing.T) (*dynamicfake.FakeDynamicClient, *store.St
 	t.Cleanup(cancel)
 
 	scheme := runtime.NewScheme()
-	gvr := schema.GroupVersionResource{Group: "karpenter.sh", Version: "v1", Resource: "nodepools"}
+	gvr := schema.GroupVersionResource{Group: "karpenter.sh", Version: "v1"}
 	scheme.AddKnownTypeWithName(
 		schema.GroupVersionKind{Group: gvr.Group, Version: gvr.Version, Kind: "NodePoolList"},
 		&unstructured.UnstructuredList{},

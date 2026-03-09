@@ -185,7 +185,7 @@ func main() {
 	memMon := agent.NewMemoryPressureMonitor(0.8, func() { runtime.GC() }, 30*time.Second, nil)
 	memMon.Start()
 
-	// 11. Run agent (blocks until context is cancelled).
+	// 11. Run agent (blocks until context is canceled).
 	if err := ag.Run(ctx); err != nil && ctx.Err() == nil {
 		slog.Error("agent exited with error", "error", err)
 	}

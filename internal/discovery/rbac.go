@@ -56,7 +56,7 @@ func hasResource(discoveryClient discovery.DiscoveryInterface, group, version, r
 	resources, err := discoveryClient.ServerResourcesForGroupVersion(groupVersion)
 	if err != nil {
 		// If the group/version is not found, treat as resource missing — not an error.
-		return false, nil
+		return false, nil //nolint:nilerr // intentional: missing API group/version is not an error
 	}
 
 	for _, r := range resources.APIResources {

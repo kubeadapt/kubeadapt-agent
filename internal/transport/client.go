@@ -52,7 +52,7 @@ func NewClient(cfg *config.Config, metrics *observability.Metrics, errCollector 
 	}
 
 	// Auth middleware decorates every request with the bearer token.
-	var transport http.RoundTripper = WithAuth(cfg.APIKey, base)
+	transport := WithAuth(cfg.APIKey, base)
 
 	return &Client{
 		httpClient: &http.Client{
@@ -88,7 +88,7 @@ func (c *Client) Send(ctx context.Context, snapshot *model.ClusterSnapshot) (*mo
 
 		// Check context before each attempt.
 		if err := ctx.Err(); err != nil {
-			lastErr = fmt.Errorf("transport: context cancelled before attempt %d: %w", attempt+1, err)
+			lastErr = fmt.Errorf("transport: context canceled before attempt %d: %w", attempt+1, err)
 			break
 		}
 
@@ -164,7 +164,7 @@ func (c *Client) doSend(ctx context.Context, snapshot *model.ClusterSnapshot) (*
 	// Create zstd encoder writing to the counting writer.
 	zw, err := zstd.NewWriter(cw, zstd.WithEncoderLevel(zstd.SpeedDefault))
 	if err != nil {
-		pw.Close()
+		_ = pw.Close()
 		return nil, 0, 0, 0, fmt.Errorf("transport: failed to create zstd encoder: %w", err)
 	}
 
@@ -186,7 +186,7 @@ func (c *Client) doSend(ctx context.Context, snapshot *model.ClusterSnapshot) (*
 		} else if closeErr != nil {
 			pw.CloseWithError(fmt.Errorf("transport: zstd close failed: %w", closeErr))
 		} else {
-			pw.Close()
+			_ = pw.Close()
 		}
 	}()
 
@@ -194,7 +194,7 @@ func (c *Client) doSend(ctx context.Context, snapshot *model.ClusterSnapshot) (*
 	url := c.config.BackendURL + "/api/v1/metrics/ingest"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, pr)
 	if err != nil {
-		pr.Close()
+		_ = pr.Close()
 		return nil, 0, 0, 0, fmt.Errorf("transport: failed to create request: %w", err)
 	}
 
@@ -203,10 +203,11 @@ func (c *Client) doSend(ctx context.Context, snapshot *model.ClusterSnapshot) (*
 	req.Header.Set("X-Agent-Version", c.config.AgentVersion)
 	req.Header.Set("X-Snapshot-ID", snapshot.SnapshotID)
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.httpClient.Do(req) //nolint:gosec // URL is from agent config
 	if err != nil {
 		return nil, origCw.Count(), cw.Count(), encodeDur.Load(), fmt.Errorf("transport: HTTP request failed: %w", err)
 	}
+	defer resp.Body.Close()
 
 	result, err := ParseResponse(resp)
 	if err != nil {

@@ -25,8 +25,14 @@ func roundTrip[T any](t *testing.T, v T) T {
 func assertEqual[T any](t *testing.T, name string, want, got T) {
 	t.Helper()
 	if !reflect.DeepEqual(want, got) {
-		wantJSON, _ := json.MarshalIndent(want, "", "  ")
-		gotJSON, _ := json.MarshalIndent(got, "", "  ")
+		wantJSON, err := json.MarshalIndent(want, "", "  ")
+		if err != nil {
+			t.Fatalf("marshal want: %v", err)
+		}
+		gotJSON, err := json.MarshalIndent(got, "", "  ")
+		if err != nil {
+			t.Fatalf("marshal got: %v", err)
+		}
 		t.Errorf("%s mismatch:\nwant: %s\ngot:  %s", name, wantJSON, gotJSON)
 	}
 }

@@ -90,8 +90,9 @@ func (s *Server) Start() error {
 	s.httpServer.Addr = ln.Addr().String()
 
 	go func() {
+		//nolint:staticcheck // SA9003: intentionally empty — Serve error on shutdown is expected
 		if err := s.httpServer.Serve(ln); err != nil && err != http.ErrServerClosed {
-			// Log or ignore; server is shutting down.
+			// Server error during shutdown — nothing actionable.
 		}
 	}()
 	return nil
@@ -105,7 +106,7 @@ func (s *Server) Stop(ctx context.Context) error {
 func (s *Server) handleHealthz(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
 func (s *Server) handleReadyz(w http.ResponseWriter, _ *http.Request) {
@@ -116,7 +117,7 @@ func (s *Server) handleReadyz(w http.ResponseWriter, _ *http.Request) {
 	} else {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}
-	json.NewEncoder(w).Encode(map[string]bool{"ready": ready})
+	_ = json.NewEncoder(w).Encode(map[string]bool{"ready": ready})
 }
 
 func (s *Server) handleDebugSnapshot(w http.ResponseWriter, _ *http.Request) {
@@ -127,11 +128,11 @@ func (s *Server) handleDebugSnapshot(w http.ResponseWriter, _ *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(snap)
+	_ = json.NewEncoder(w).Encode(snap)
 }
 
 func (s *Server) handleDebugStore(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(s.store.ItemCounts())
+	_ = json.NewEncoder(w).Encode(s.store.ItemCounts())
 }

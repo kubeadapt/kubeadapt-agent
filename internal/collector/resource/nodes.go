@@ -41,13 +41,15 @@ func NewNodeCollector(client kubernetes.Interface, s *store.Store, m *observabil
 	}
 }
 
+// Name implements collector.Collector.
 func (c *NodeCollector) Name() string { return "nodes" }
 
+// Start implements collector.Collector.
 func (c *NodeCollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Core().V1().Nodes().Informer()
 
-	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			node, ok := obj.(*corev1.Node)
 			if !ok {
@@ -84,7 +86,9 @@ func (c *NodeCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("nodes", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("nodes").Set(float64(c.store.Nodes.Len()))
 		},
-	})
+	}); err != nil {
+		return fmt.Errorf("%s: add event handler: %w", c.Name(), err)
+	}
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -93,6 +97,7 @@ func (c *NodeCollector) Start(_ context.Context) error {
 	return nil
 }
 
+// WaitForSync implements collector.Collector.
 func (c *NodeCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("nodes informer cache sync failed")
@@ -100,6 +105,7 @@ func (c *NodeCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
+// Stop implements collector.Collector.
 func (c *NodeCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

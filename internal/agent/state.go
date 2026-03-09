@@ -12,6 +12,7 @@ import (
 // AgentState represents the current lifecycle state of the agent.
 type AgentState string
 
+// Agent lifecycle states.
 const (
 	StateStarting AgentState = "starting"
 	StateRunning  AgentState = "running"

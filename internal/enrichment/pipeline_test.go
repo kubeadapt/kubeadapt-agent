@@ -10,10 +10,9 @@ import (
 
 // stubEnricher records calls and optionally returns an error.
 type stubEnricher struct {
-	name    string
-	err     error
-	called  bool
-	callIdx int
+	name   string
+	err    error
+	called bool
 }
 
 func (s *stubEnricher) Name() string { return s.name }

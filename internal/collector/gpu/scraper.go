@@ -24,7 +24,7 @@ func scrapeEndpoint(ctx context.Context, client *http.Client, endpoint string) (
 		return nil, fmt.Errorf("creating request for %s: %w", url, err)
 	}
 
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) //nolint:gosec // URL is from DCGM exporter endpoint config
 	if err != nil {
 		return nil, fmt.Errorf("scraping %s: %w", url, err)
 	}

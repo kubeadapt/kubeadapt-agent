@@ -41,6 +41,7 @@ func NewPodCollector(client kubernetes.Interface, s *store.Store, m *observabili
 	}
 }
 
+// Name implements collector.Collector.
 func (c *PodCollector) Name() string { return "pods" }
 
 // podKey returns the store key for a pod: "namespace/name".
@@ -48,11 +49,12 @@ func podKey(namespace, name string) string {
 	return namespace + "/" + name
 }
 
+// Start implements collector.Collector.
 func (c *PodCollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Core().V1().Pods().Informer()
 
-	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pod, ok := obj.(*corev1.Pod)
 			if !ok {
@@ -89,7 +91,9 @@ func (c *PodCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("pods", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("pods").Set(float64(c.store.Pods.Len()))
 		},
-	})
+	}); err != nil {
+		return fmt.Errorf("%s: add event handler: %w", c.Name(), err)
+	}
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -98,6 +102,7 @@ func (c *PodCollector) Start(_ context.Context) error {
 	return nil
 }
 
+// WaitForSync implements collector.Collector.
 func (c *PodCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("pods informer cache sync failed")
@@ -105,6 +110,7 @@ func (c *PodCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
+// Stop implements collector.Collector.
 func (c *PodCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

@@ -41,13 +41,15 @@ func NewJobCollector(client kubernetes.Interface, s *store.Store, m *observabili
 	}
 }
 
+// Name implements collector.Collector.
 func (c *JobCollector) Name() string { return "jobs" }
 
+// Start implements collector.Collector.
 func (c *JobCollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Batch().V1().Jobs().Informer()
 
-	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			job, ok := obj.(*batchv1.Job)
 			if !ok {
@@ -84,7 +86,9 @@ func (c *JobCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("jobs", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("jobs").Set(float64(c.store.Jobs.Len()))
 		},
-	})
+	}); err != nil {
+		return fmt.Errorf("%s: add event handler: %w", c.Name(), err)
+	}
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -93,6 +97,7 @@ func (c *JobCollector) Start(_ context.Context) error {
 	return nil
 }
 
+// WaitForSync implements collector.Collector.
 func (c *JobCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("jobs informer cache sync failed")
@@ -100,6 +105,7 @@ func (c *JobCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
+// Stop implements collector.Collector.
 func (c *JobCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

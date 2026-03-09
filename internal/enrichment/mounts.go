@@ -15,6 +15,7 @@ func NewMountsEnricher() *MountsEnricher {
 	return &MountsEnricher{}
 }
 
+// Name implements the Enricher interface.
 func (m *MountsEnricher) Name() string { return "mounts" }
 
 // Enrich is a no-op until pod volume data is available in the model.

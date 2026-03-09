@@ -41,13 +41,15 @@ func NewStatefulSetCollector(client kubernetes.Interface, s *store.Store, m *obs
 	}
 }
 
+// Name implements collector.Collector.
 func (c *StatefulSetCollector) Name() string { return "statefulsets" }
 
+// Start implements collector.Collector.
 func (c *StatefulSetCollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Apps().V1().StatefulSets().Informer()
 
-	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			ss, ok := obj.(*appsv1.StatefulSet)
 			if !ok {
@@ -84,7 +86,9 @@ func (c *StatefulSetCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("statefulsets", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("statefulsets").Set(float64(c.store.StatefulSets.Len()))
 		},
-	})
+	}); err != nil {
+		return fmt.Errorf("%s: add event handler: %w", c.Name(), err)
+	}
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -93,6 +97,7 @@ func (c *StatefulSetCollector) Start(_ context.Context) error {
 	return nil
 }
 
+// WaitForSync implements collector.Collector.
 func (c *StatefulSetCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("statefulsets informer cache sync failed")
@@ -100,6 +105,7 @@ func (c *StatefulSetCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
+// Stop implements collector.Collector.
 func (c *StatefulSetCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

@@ -45,7 +45,7 @@ func (c *GPUMetricsCollector) Start(ctx context.Context) error {
 	return nil
 }
 
-// WaitForSync blocks until the first poll completes or the context is cancelled.
+// WaitForSync blocks until the first poll completes or the context is canceled.
 func (c *GPUMetricsCollector) WaitForSync(ctx context.Context) error {
 	select {
 	case <-c.synced:

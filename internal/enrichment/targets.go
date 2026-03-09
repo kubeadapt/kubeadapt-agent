@@ -13,6 +13,7 @@ func NewTargetsEnricher() *TargetsEnricher {
 	return &TargetsEnricher{}
 }
 
+// Name implements the Enricher interface.
 func (te *TargetsEnricher) Name() string { return "targets" }
 
 // workloadEntry groups a workload's selector with its identity.
