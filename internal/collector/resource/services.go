@@ -41,13 +41,15 @@ func NewServiceCollector(client kubernetes.Interface, s *store.Store, m *observa
 	}
 }
 
+// Name implements collector.Collector.
 func (c *ServiceCollector) Name() string { return "services" }
 
+// Start implements collector.Collector.
 func (c *ServiceCollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Core().V1().Services().Informer()
 
-	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			svc, ok := obj.(*corev1.Service)
 			if !ok {
@@ -84,7 +86,9 @@ func (c *ServiceCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("services", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("services").Set(float64(c.store.Services.Len()))
 		},
-	})
+	}); err != nil {
+		return fmt.Errorf("%s: add event handler: %w", c.Name(), err)
+	}
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -93,6 +97,7 @@ func (c *ServiceCollector) Start(_ context.Context) error {
 	return nil
 }
 
+// WaitForSync implements collector.Collector.
 func (c *ServiceCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("services informer cache sync failed")
@@ -100,6 +105,7 @@ func (c *ServiceCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
+// Stop implements collector.Collector.
 func (c *ServiceCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

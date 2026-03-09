@@ -41,13 +41,15 @@ func NewHPACollector(client kubernetes.Interface, s *store.Store, m *observabili
 	}
 }
 
+// Name implements collector.Collector.
 func (c *HPACollector) Name() string { return "hpas" }
 
+// Start implements collector.Collector.
 func (c *HPACollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Autoscaling().V2().HorizontalPodAutoscalers().Informer()
 
-	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			hpa, ok := obj.(*autoscalingv2.HorizontalPodAutoscaler)
 			if !ok {
@@ -84,7 +86,9 @@ func (c *HPACollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("hpas", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("hpas").Set(float64(c.store.HPAs.Len()))
 		},
-	})
+	}); err != nil {
+		return fmt.Errorf("%s: add event handler: %w", c.Name(), err)
+	}
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -93,6 +97,7 @@ func (c *HPACollector) Start(_ context.Context) error {
 	return nil
 }
 
+// WaitForSync implements collector.Collector.
 func (c *HPACollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("hpas informer cache sync failed")
@@ -100,6 +105,7 @@ func (c *HPACollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
+// Stop implements collector.Collector.
 func (c *HPACollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

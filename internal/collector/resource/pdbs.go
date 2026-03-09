@@ -41,13 +41,15 @@ func NewPDBCollector(client kubernetes.Interface, s *store.Store, m *observabili
 	}
 }
 
+// Name implements collector.Collector.
 func (c *PDBCollector) Name() string { return "pdbs" }
 
+// Start implements collector.Collector.
 func (c *PDBCollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Policy().V1().PodDisruptionBudgets().Informer()
 
-	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pdb, ok := obj.(*policyv1.PodDisruptionBudget)
 			if !ok {
@@ -84,7 +86,9 @@ func (c *PDBCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("pdbs", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("pdbs").Set(float64(c.store.PDBs.Len()))
 		},
-	})
+	}); err != nil {
+		return fmt.Errorf("%s: add event handler: %w", c.Name(), err)
+	}
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -93,6 +97,7 @@ func (c *PDBCollector) Start(_ context.Context) error {
 	return nil
 }
 
+// WaitForSync implements collector.Collector.
 func (c *PDBCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("pdbs informer cache sync failed")
@@ -100,6 +105,7 @@ func (c *PDBCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
+// Stop implements collector.Collector.
 func (c *PDBCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

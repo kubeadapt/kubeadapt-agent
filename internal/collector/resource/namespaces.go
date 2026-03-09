@@ -41,13 +41,15 @@ func NewNamespaceCollector(client kubernetes.Interface, s *store.Store, m *obser
 	}
 }
 
+// Name implements collector.Collector.
 func (c *NamespaceCollector) Name() string { return "namespaces" }
 
+// Start implements collector.Collector.
 func (c *NamespaceCollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Core().V1().Namespaces().Informer()
 
-	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			ns, ok := obj.(*corev1.Namespace)
 			if !ok {
@@ -84,7 +86,9 @@ func (c *NamespaceCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("namespaces", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("namespaces").Set(float64(c.store.Namespaces.Len()))
 		},
-	})
+	}); err != nil {
+		return fmt.Errorf("%s: add event handler: %w", c.Name(), err)
+	}
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -93,6 +97,7 @@ func (c *NamespaceCollector) Start(_ context.Context) error {
 	return nil
 }
 
+// WaitForSync implements collector.Collector.
 func (c *NamespaceCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("namespaces informer cache sync failed")
@@ -100,6 +105,7 @@ func (c *NamespaceCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
+// Stop implements collector.Collector.
 func (c *NamespaceCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

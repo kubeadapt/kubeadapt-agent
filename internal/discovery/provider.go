@@ -6,6 +6,14 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+// Well-known provider identifiers.
+const (
+	providerAWS     = "aws"
+	providerGCP     = "gcp"
+	providerAzure   = "azure"
+	providerUnknown = "unknown"
+)
+
 // Well-known provider-specific node labels used as confirmation signals.
 const (
 	labelEKSNodeGroup    = "eks.amazonaws.com/nodegroup"
@@ -21,7 +29,7 @@ const (
 // Returns "aws", "gcp", "azure", or "unknown".
 func DetectProvider(nodes []*v1.Node) string {
 	if len(nodes) == 0 {
-		return "unknown"
+		return providerUnknown
 	}
 
 	node := nodes[0]
@@ -36,18 +44,18 @@ func DetectProvider(nodes []*v1.Node) string {
 		return provider
 	}
 
-	return "unknown"
+	return providerUnknown
 }
 
 // providerFromID extracts the provider name from a node's spec.providerID.
 func providerFromID(providerID string) string {
 	switch {
 	case strings.HasPrefix(providerID, "aws://"):
-		return "aws"
+		return providerAWS
 	case strings.HasPrefix(providerID, "gce://"):
-		return "gcp"
+		return providerGCP
 	case strings.HasPrefix(providerID, "azure://"):
-		return "azure"
+		return providerAzure
 	default:
 		return ""
 	}
@@ -60,16 +68,16 @@ func providerFromLabels(labels map[string]string) string {
 	}
 
 	if _, ok := labels[labelEKSNodeGroup]; ok {
-		return "aws"
+		return providerAWS
 	}
 	if _, ok := labels[labelEKSCapacity]; ok {
-		return "aws"
+		return providerAWS
 	}
 	if _, ok := labels[labelGKENodePool]; ok {
-		return "gcp"
+		return providerGCP
 	}
 	if _, ok := labels[labelAKSNodepoolName]; ok {
-		return "azure"
+		return providerAzure
 	}
 
 	return ""

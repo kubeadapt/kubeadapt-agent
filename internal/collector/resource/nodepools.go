@@ -48,13 +48,15 @@ func NewNodePoolCollector(dynamicClient dynamic.Interface, s *store.Store, m *ob
 	}
 }
 
+// Name implements collector.Collector.
 func (c *NodePoolCollector) Name() string { return "nodepools" }
 
+// Start implements collector.Collector.
 func (c *NodePoolCollector) Start(_ context.Context) error {
 	factory := dynamicinformer.NewDynamicSharedInformerFactory(c.dynamicClient, c.resyncPeriod)
 	c.informer = factory.ForResource(nodePoolGVR).Informer()
 
-	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			u, ok := obj.(*unstructured.Unstructured)
 			if !ok {
@@ -91,7 +93,9 @@ func (c *NodePoolCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("nodepools", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("nodepools").Set(float64(c.store.NodePools.Len()))
 		},
-	})
+	}); err != nil {
+		return fmt.Errorf("%s: add event handler: %w", c.Name(), err)
+	}
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -100,6 +104,7 @@ func (c *NodePoolCollector) Start(_ context.Context) error {
 	return nil
 }
 
+// WaitForSync implements collector.Collector.
 func (c *NodePoolCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("nodepools informer cache sync failed")
@@ -107,6 +112,7 @@ func (c *NodePoolCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
+// Stop implements collector.Collector.
 func (c *NodePoolCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

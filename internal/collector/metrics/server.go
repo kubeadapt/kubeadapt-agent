@@ -75,13 +75,16 @@ func NewMetricsCollectorFromClient(client metricsv1beta1client.MetricsV1beta1Int
 	return NewMetricsCollector(&metricsAPIClient{client: client}, metricsStore, metrics, interval)
 }
 
+// Name implements collector.Collector.
 func (c *MetricsCollector) Name() string { return "metrics" }
 
+// Start implements collector.Collector.
 func (c *MetricsCollector) Start(ctx context.Context) error {
 	go c.run(ctx)
 	return nil
 }
 
+// WaitForSync implements collector.Collector.
 func (c *MetricsCollector) WaitForSync(ctx context.Context) error {
 	select {
 	case <-c.synced:
@@ -91,6 +94,7 @@ func (c *MetricsCollector) WaitForSync(ctx context.Context) error {
 	}
 }
 
+// Stop implements collector.Collector.
 func (c *MetricsCollector) Stop() {
 	close(c.stopCh)
 	<-c.done

@@ -41,13 +41,15 @@ func NewPriorityClassCollector(client kubernetes.Interface, s *store.Store, m *o
 	}
 }
 
+// Name implements collector.Collector.
 func (c *PriorityClassCollector) Name() string { return "priorityclasses" }
 
+// Start implements collector.Collector.
 func (c *PriorityClassCollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Scheduling().V1().PriorityClasses().Informer()
 
-	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pc, ok := obj.(*schedulingv1.PriorityClass)
 			if !ok {
@@ -84,7 +86,9 @@ func (c *PriorityClassCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("priorityclasses", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("priorityclasses").Set(float64(c.store.PriorityClasses.Len()))
 		},
-	})
+	}); err != nil {
+		return fmt.Errorf("%s: add event handler: %w", c.Name(), err)
+	}
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -93,6 +97,7 @@ func (c *PriorityClassCollector) Start(_ context.Context) error {
 	return nil
 }
 
+// WaitForSync implements collector.Collector.
 func (c *PriorityClassCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("priorityclasses informer cache sync failed")
@@ -100,6 +105,7 @@ func (c *PriorityClassCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
+// Stop implements collector.Collector.
 func (c *PriorityClassCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

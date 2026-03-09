@@ -448,7 +448,7 @@ func TestClient_Send_5xx_RetriedThenFails(t *testing.T) {
 // TestClient_Send_ContextCancellation verifies cancellation is respected.
 func TestClient_Send_ContextCancellation(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Slow server — should be cancelled.
+		// Slow server — should be canceled.
 		time.Sleep(5 * time.Second)
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -463,6 +463,6 @@ func TestClient_Send_ContextCancellation(t *testing.T) {
 
 	_, err := client.Send(ctx, testSnapshot())
 	if err == nil {
-		t.Fatal("expected error from cancelled context")
+		t.Fatal("expected error from canceled context")
 	}
 }

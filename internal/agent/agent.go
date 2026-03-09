@@ -81,7 +81,7 @@ func (a *Agent) LatestSnapshot() interface{} {
 }
 
 // Run executes the agent lifecycle: start collectors, wait for sync,
-// then enter the snapshot-send loop until the context is cancelled or
+// then enter the snapshot-send loop until the context is canceled or
 // the state machine transitions to a terminal state.
 func (a *Agent) Run(ctx context.Context) error {
 	// Wire the cancel func into the state machine so 410 can trigger exit.
@@ -133,7 +133,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 
 	// 2b. Log post-sync store diagnostics so operators can verify counts.
-	a.logStoreCounts()
+	a.logStoreCounts(ctx)
 
 	// 3. Transition to Running.
 	a.stateMachine.TransitionTo(StateRunning, "informers synced")
@@ -180,8 +180,8 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 }
 
-func (a *Agent) logStoreCounts() {
-	snap := a.builder.Build(context.Background())
+func (a *Agent) logStoreCounts(ctx context.Context) {
+	snap := a.builder.Build(ctx)
 	slog.Info("post-sync store counts",
 		"nodes", len(snap.Nodes),
 		"pods", len(snap.Pods),

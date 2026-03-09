@@ -8,6 +8,7 @@ import (
 )
 
 const maxOwnerDepth = 10
+const kindReplicaSet = "ReplicaSet"
 
 // OwnershipEnricher resolves pod ownership chains.
 // It walks from Pod → ReplicaSet → Deployment (or other top-level owner),
@@ -23,6 +24,7 @@ func NewOwnershipEnricher(replicaSets []model.ReplicaSetInfo) *OwnershipEnricher
 	return &OwnershipEnricher{replicaSets: replicaSets}
 }
 
+// Name implements the Enricher interface.
 func (o *OwnershipEnricher) Name() string { return "ownership" }
 
 // Enrich resolves ownership for each pod in the snapshot.
@@ -80,7 +82,7 @@ func (o *OwnershipEnricher) resolveOwner(
 		resolved := false
 
 		switch kind {
-		case "ReplicaSet":
+		case kindReplicaSet:
 			key := fmt.Sprintf("%s/%s", ns, name)
 			rs, ok := rsMap[key]
 			if !ok {

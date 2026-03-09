@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// CloudMetadata holds cloud provider metadata collected from instance metadata services.
 type CloudMetadata struct {
 	AccountID    string
 	Region       string
@@ -26,6 +27,7 @@ const (
 	azureIMDSBase   = "http://169.254.169.254"
 )
 
+// DetectCloudMetadata probes cloud instance metadata services (AWS IMDS, GCP, Azure) to detect provider and instance info.
 func DetectCloudMetadata(ctx context.Context, timeout time.Duration) CloudMetadata {
 	client := &http.Client{Timeout: timeout}
 
@@ -64,7 +66,7 @@ func detectAWSURL(ctx context.Context, client *http.Client, base string) (CloudM
 	}
 	tokenReq.Header.Set("X-aws-ec2-metadata-token-ttl-seconds", "60")
 
-	tokenResp, err := client.Do(tokenReq)
+	tokenResp, err := client.Do(tokenReq) //nolint:gosec // URL is a well-known IMDS endpoint
 	if err != nil {
 		return CloudMetadata{}, err
 	}
@@ -86,7 +88,7 @@ func detectAWSURL(ctx context.Context, client *http.Client, base string) (CloudM
 	}
 	docReq.Header.Set("X-aws-ec2-metadata-token", token)
 
-	docResp, err := client.Do(docReq)
+	docResp, err := client.Do(docReq) //nolint:gosec // URL is a well-known IMDS endpoint
 	if err != nil {
 		return CloudMetadata{}, err
 	}
@@ -129,7 +131,7 @@ func detectGCPURL(ctx context.Context, client *http.Client, base string) (CloudM
 		}
 		req.Header.Set("Metadata-Flavor", "Google")
 
-		resp, err := client.Do(req)
+		resp, err := client.Do(req) //nolint:gosec // URL is a well-known metadata endpoint
 		if err != nil {
 			return "", err
 		}
@@ -193,14 +195,14 @@ func detectAzureURL(ctx context.Context, client *http.Client, base string) (Clou
 	}
 	req.Header.Set("Metadata", "true")
 
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) //nolint:gosec // URL is a well-known IMDS endpoint
 	if err != nil {
 		return CloudMetadata{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return CloudMetadata{}, fmt.Errorf("Azure IMDS returned %d", resp.StatusCode)
+		return CloudMetadata{}, fmt.Errorf("azure IMDS returned %d", resp.StatusCode)
 	}
 
 	var doc struct {

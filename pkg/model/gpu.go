@@ -1,5 +1,6 @@
 package model
 
+// GPUDeviceInfo holds information about a single GPU device on a node.
 type GPUDeviceInfo struct {
 	UUID                string   `json:"uuid"`
 	DeviceIndex         string   `json:"device_index"`
