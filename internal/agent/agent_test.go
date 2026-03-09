@@ -72,7 +72,6 @@ func newTestBackend(t *testing.T, requestCount *atomic.Int32, statusCode int) *h
 func newTestConfig(backendURL string) *config.Config {
 	return &config.Config{
 		APIKey:              "test-key",
-		ClusterID:           "test-cluster",
 		ClusterName:         "test",
 		BackendURL:          backendURL,
 		SnapshotInterval:    50 * time.Millisecond, // fast for tests
@@ -242,7 +241,7 @@ func TestAgent_Run_LatestSnapshotSetAfterFirstBuild(t *testing.T) {
 
 	snap, ok := ag.LatestSnapshot().(*model.ClusterSnapshot)
 	require.True(t, ok, "should be a *model.ClusterSnapshot")
-	assert.Equal(t, "test-cluster", snap.ClusterID)
+	assert.Empty(t, snap.ClusterID, "ClusterID should be empty - server sets it from JWT")
 
 	cancel()
 	<-done

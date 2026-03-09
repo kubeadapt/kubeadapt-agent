@@ -41,15 +41,13 @@ func NewLimitRangeCollector(client kubernetes.Interface, s *store.Store, m *obse
 	}
 }
 
-// Name returns the collector name.
 func (c *LimitRangeCollector) Name() string { return "limitranges" }
 
-// Start registers event handlers and begins the informer.
 func (c *LimitRangeCollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Core().V1().LimitRanges().Informer()
 
-	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			lr, ok := obj.(*corev1.LimitRange)
 			if !ok {
@@ -86,9 +84,7 @@ func (c *LimitRangeCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("limitranges", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("limitranges").Set(float64(c.store.LimitRanges.Len()))
 		},
-	}); err != nil {
-		return fmt.Errorf("failed to add event handler: %w", err)
-	}
+	})
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -97,7 +93,6 @@ func (c *LimitRangeCollector) Start(_ context.Context) error {
 	return nil
 }
 
-// WaitForSync blocks until the informer cache is synced or ctx is canceled.
 func (c *LimitRangeCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("limitranges informer cache sync failed")
@@ -105,7 +100,6 @@ func (c *LimitRangeCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
-// Stop signals the collector to stop and waits for the goroutine to exit.
 func (c *LimitRangeCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

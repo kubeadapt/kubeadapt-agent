@@ -1,6 +1,5 @@
 package model
 
-// GPUDeviceInfo holds per-device GPU metrics collected from dcgm-exporter.
 type GPUDeviceInfo struct {
 	UUID                string   `json:"uuid"`
 	DeviceIndex         string   `json:"device_index"`

@@ -75,16 +75,13 @@ func NewMetricsCollectorFromClient(client metricsv1beta1client.MetricsV1beta1Int
 	return NewMetricsCollector(&metricsAPIClient{client: client}, metricsStore, metrics, interval)
 }
 
-// Name returns the collector name.
 func (c *MetricsCollector) Name() string { return "metrics" }
 
-// Start launches the background polling goroutine.
 func (c *MetricsCollector) Start(ctx context.Context) error {
 	go c.run(ctx)
 	return nil
 }
 
-// WaitForSync blocks until the first metrics poll completes or ctx is canceled.
 func (c *MetricsCollector) WaitForSync(ctx context.Context) error {
 	select {
 	case <-c.synced:
@@ -94,7 +91,6 @@ func (c *MetricsCollector) WaitForSync(ctx context.Context) error {
 	}
 }
 
-// Stop signals the collector to stop and waits for the goroutine to exit.
 func (c *MetricsCollector) Stop() {
 	close(c.stopCh)
 	<-c.done
@@ -128,7 +124,9 @@ func (c *MetricsCollector) poll(ctx context.Context) {
 	c.pollNodeMetrics(ctx)
 	c.pollPodMetrics(ctx)
 
-	c.metrics.MetricsAPIDuration.Observe(time.Since(start).Seconds())
+	elapsed := time.Since(start)
+	c.metrics.MetricsAPIDuration.Observe(elapsed.Seconds())
+	c.metrics.LastMetricsCollectMs.Store(elapsed.Milliseconds())
 }
 
 func (c *MetricsCollector) pollNodeMetrics(ctx context.Context) {

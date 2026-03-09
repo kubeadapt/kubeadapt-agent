@@ -42,15 +42,13 @@ func NewReplicaSetCollector(client kubernetes.Interface, s *store.Store, m *obse
 	}
 }
 
-// Name returns the collector name.
 func (c *ReplicaSetCollector) Name() string { return "replicasets" }
 
-// Start registers event handlers and begins the informer.
 func (c *ReplicaSetCollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Apps().V1().ReplicaSets().Informer()
 
-	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			rs, ok := obj.(*appsv1.ReplicaSet)
 			if !ok {
@@ -87,9 +85,7 @@ func (c *ReplicaSetCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("replicasets", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("replicasets").Set(float64(c.store.ReplicaSets.Len()))
 		},
-	}); err != nil {
-		return fmt.Errorf("failed to add event handler: %w", err)
-	}
+	})
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -98,7 +94,6 @@ func (c *ReplicaSetCollector) Start(_ context.Context) error {
 	return nil
 }
 
-// WaitForSync blocks until the informer cache is synced or ctx is canceled.
 func (c *ReplicaSetCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("replicasets informer cache sync failed")
@@ -106,7 +101,6 @@ func (c *ReplicaSetCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
-// Stop signals the collector to stop and waits for the goroutine to exit.
 func (c *ReplicaSetCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

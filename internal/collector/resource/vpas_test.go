@@ -23,7 +23,7 @@ func newVPATestEnv(t *testing.T) (*dynamicfake.FakeDynamicClient, *store.Store, 
 	t.Cleanup(cancel)
 
 	scheme := runtime.NewScheme()
-	gvr := schema.GroupVersionResource{Group: "autoscaling.k8s.io", Version: "v1"}
+	gvr := schema.GroupVersionResource{Group: "autoscaling.k8s.io", Version: "v1", Resource: "verticalpodautoscalers"}
 	scheme.AddKnownTypeWithName(
 		schema.GroupVersionKind{Group: gvr.Group, Version: gvr.Version, Kind: "VerticalPodAutoscalerList"},
 		&unstructured.UnstructuredList{},

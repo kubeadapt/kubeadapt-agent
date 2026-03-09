@@ -41,15 +41,13 @@ func NewDaemonSetCollector(client kubernetes.Interface, s *store.Store, m *obser
 	}
 }
 
-// Name returns the collector name.
 func (c *DaemonSetCollector) Name() string { return "daemonsets" }
 
-// Start registers event handlers and begins the informer.
 func (c *DaemonSetCollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Apps().V1().DaemonSets().Informer()
 
-	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			ds, ok := obj.(*appsv1.DaemonSet)
 			if !ok {
@@ -86,9 +84,7 @@ func (c *DaemonSetCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("daemonsets", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("daemonsets").Set(float64(c.store.DaemonSets.Len()))
 		},
-	}); err != nil {
-		return fmt.Errorf("failed to add event handler: %w", err)
-	}
+	})
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -97,7 +93,6 @@ func (c *DaemonSetCollector) Start(_ context.Context) error {
 	return nil
 }
 
-// WaitForSync blocks until the informer cache is synced or ctx is canceled.
 func (c *DaemonSetCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("daemonsets informer cache sync failed")
@@ -105,7 +100,6 @@ func (c *DaemonSetCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
-// Stop signals the collector to stop and waits for the goroutine to exit.
 func (c *DaemonSetCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

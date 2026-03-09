@@ -91,7 +91,7 @@ func (s *Server) Start() error {
 
 	go func() {
 		if err := s.httpServer.Serve(ln); err != nil && err != http.ErrServerClosed {
-			_ = err // server exited with unexpected error; ignore during shutdown
+			// Log or ignore; server is shutting down.
 		}
 	}()
 	return nil
@@ -105,7 +105,7 @@ func (s *Server) Stop(ctx context.Context) error {
 func (s *Server) handleHealthz(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
 func (s *Server) handleReadyz(w http.ResponseWriter, _ *http.Request) {
@@ -116,7 +116,7 @@ func (s *Server) handleReadyz(w http.ResponseWriter, _ *http.Request) {
 	} else {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}
-	_ = json.NewEncoder(w).Encode(map[string]bool{"ready": ready})
+	json.NewEncoder(w).Encode(map[string]bool{"ready": ready})
 }
 
 func (s *Server) handleDebugSnapshot(w http.ResponseWriter, _ *http.Request) {
@@ -127,11 +127,11 @@ func (s *Server) handleDebugSnapshot(w http.ResponseWriter, _ *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(snap)
+	json.NewEncoder(w).Encode(snap)
 }
 
 func (s *Server) handleDebugStore(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(s.store.ItemCounts())
+	json.NewEncoder(w).Encode(s.store.ItemCounts())
 }

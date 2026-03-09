@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/klauspost/compress/zstd"
@@ -17,6 +18,13 @@ import (
 	"github.com/kubeadapt/kubeadapt-agent/pkg/model"
 )
 
+// SendStats holds payload size info from the last successful send.
+type SendStats struct {
+	OriginalBytes    int64
+	CompressedBytes  int64
+	EncodeDurationMs int64
+}
+
 // Client sends ClusterSnapshots to the backend over HTTP with streaming
 // zstd compression. It never buffers the full JSON payload in memory.
 type Client struct {
@@ -24,6 +32,7 @@ type Client struct {
 	config         *config.Config
 	metrics        *observability.Metrics
 	errorCollector *agenterrors.ErrorCollector
+	lastSendStats  SendStats // updated after each successful send
 }
 
 // NewClient creates a transport Client with middleware applied.
@@ -43,7 +52,7 @@ func NewClient(cfg *config.Config, metrics *observability.Metrics, errCollector 
 	}
 
 	// Auth middleware decorates every request with the bearer token.
-	transport := WithAuth(cfg.APIKey, base)
+	var transport http.RoundTripper = WithAuth(cfg.APIKey, base)
 
 	return &Client{
 		httpClient: &http.Client{
@@ -63,6 +72,8 @@ func (c *Client) Send(ctx context.Context, snapshot *model.ClusterSnapshot) (*mo
 
 	var result *model.SnapshotResponse
 	var compressedBytes int64
+	var originalBytes int64
+	var encodeDurationMs int64
 	var lastErr error
 
 	maxAttempts := c.config.MaxRetries + 1
@@ -77,12 +88,14 @@ func (c *Client) Send(ctx context.Context, snapshot *model.ClusterSnapshot) (*mo
 
 		// Check context before each attempt.
 		if err := ctx.Err(); err != nil {
-			lastErr = fmt.Errorf("transport: context canceled before attempt %d: %w", attempt+1, err)
+			lastErr = fmt.Errorf("transport: context cancelled before attempt %d: %w", attempt+1, err)
 			break
 		}
 
-		resp, bytes, err := c.doSend(ctx, snapshot)
-		compressedBytes = bytes
+		resp, origBytes, compBytes, encMs, err := c.doSend(ctx, snapshot)
+		compressedBytes = compBytes
+		originalBytes = origBytes
+		encodeDurationMs = encMs
 		if err != nil {
 			lastErr = err
 			// Don't retry auth failures or non-retryable errors.
@@ -125,12 +138,24 @@ func (c *Client) Send(ctx context.Context, snapshot *model.ClusterSnapshot) (*mo
 		return nil, lastErr
 	}
 
+	// Store stats for agent health reporting.
+	c.lastSendStats = SendStats{
+		OriginalBytes:    originalBytes,
+		CompressedBytes:  compressedBytes,
+		EncodeDurationMs: encodeDurationMs,
+	}
+
 	return result, nil
+}
+
+// LastSendStats returns payload size info from the most recent successful send.
+func (c *Client) LastSendStats() SendStats {
+	return c.lastSendStats
 }
 
 // doSend performs a single HTTP POST with streaming compression.
 // Each call creates a fresh io.Pipe so it can be called multiple times for retries.
-func (c *Client) doSend(ctx context.Context, snapshot *model.ClusterSnapshot) (*model.SnapshotResponse, int64, error) {
+func (c *Client) doSend(ctx context.Context, snapshot *model.ClusterSnapshot) (*model.SnapshotResponse, int64, int64, int64, error) {
 	pr, pw := io.Pipe()
 
 	// CountingWriter wraps the pipe writer to track compressed bytes.
@@ -139,21 +164,29 @@ func (c *Client) doSend(ctx context.Context, snapshot *model.ClusterSnapshot) (*
 	// Create zstd encoder writing to the counting writer.
 	zw, err := zstd.NewWriter(cw, zstd.WithEncoderLevel(zstd.SpeedDefault))
 	if err != nil {
-		_ = pw.Close()
-		return nil, 0, fmt.Errorf("transport: failed to create zstd encoder: %w", err)
+		pw.Close()
+		return nil, 0, 0, 0, fmt.Errorf("transport: failed to create zstd encoder: %w", err)
 	}
 
-	// Goroutine: encode JSON → zstd → pipe.
+	// CountingWriter wraps the zstd writer to track original (pre-compression) bytes.
+	origCw := NewCountingWriter(zw)
+
+	// Track encode goroutine duration (JSON marshal + zstd compression).
+	var encodeDur atomic.Int64
+	encodeStart := time.Now()
+
+	// Goroutine: encode JSON → origCw (count) → zstd → cw (count) → pipe.
 	go func() {
-		encodeErr := json.NewEncoder(zw).Encode(snapshot)
+		encodeErr := json.NewEncoder(origCw).Encode(snapshot)
 		// Close zstd first to flush, then close the pipe.
 		closeErr := zw.Close()
+		encodeDur.Store(time.Since(encodeStart).Milliseconds())
 		if encodeErr != nil {
 			pw.CloseWithError(fmt.Errorf("transport: JSON encode failed: %w", encodeErr))
 		} else if closeErr != nil {
 			pw.CloseWithError(fmt.Errorf("transport: zstd close failed: %w", closeErr))
 		} else {
-			_ = pw.Close()
+			pw.Close()
 		}
 	}()
 
@@ -161,28 +194,26 @@ func (c *Client) doSend(ctx context.Context, snapshot *model.ClusterSnapshot) (*
 	url := c.config.BackendURL + "/api/v1/metrics/ingest"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, pr)
 	if err != nil {
-		_ = pr.Close()
-		return nil, 0, fmt.Errorf("transport: failed to create request: %w", err)
+		pr.Close()
+		return nil, 0, 0, 0, fmt.Errorf("transport: failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "zstd")
-	req.Header.Set("X-Cluster-ID", c.config.ClusterID)
 	req.Header.Set("X-Agent-Version", c.config.AgentVersion)
 	req.Header.Set("X-Snapshot-ID", snapshot.SnapshotID)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, cw.Count(), fmt.Errorf("transport: HTTP request failed: %w", err)
+		return nil, origCw.Count(), cw.Count(), encodeDur.Load(), fmt.Errorf("transport: HTTP request failed: %w", err)
 	}
-	defer resp.Body.Close()
 
 	result, err := ParseResponse(resp)
 	if err != nil {
-		return nil, cw.Count(), err
+		return nil, origCw.Count(), cw.Count(), encodeDur.Load(), err
 	}
 
-	return result, cw.Count(), nil
+	return result, origCw.Count(), cw.Count(), encodeDur.Load(), nil
 }
 
 // isNonRetryableError checks if an error should not be retried.

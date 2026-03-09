@@ -41,15 +41,13 @@ func NewPVCollector(client kubernetes.Interface, s *store.Store, m *observabilit
 	}
 }
 
-// Name returns the collector name.
 func (c *PVCollector) Name() string { return "pvs" }
 
-// Start registers event handlers and begins the informer.
 func (c *PVCollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Core().V1().PersistentVolumes().Informer()
 
-	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pv, ok := obj.(*corev1.PersistentVolume)
 			if !ok {
@@ -86,9 +84,7 @@ func (c *PVCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("pvs", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("pvs").Set(float64(c.store.PVs.Len()))
 		},
-	}); err != nil {
-		return fmt.Errorf("failed to add event handler: %w", err)
-	}
+	})
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -97,7 +93,6 @@ func (c *PVCollector) Start(_ context.Context) error {
 	return nil
 }
 
-// WaitForSync blocks until the informer cache is synced or ctx is canceled.
 func (c *PVCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("pvs informer cache sync failed")
@@ -105,7 +100,6 @@ func (c *PVCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
-// Stop signals the collector to stop and waits for the goroutine to exit.
 func (c *PVCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

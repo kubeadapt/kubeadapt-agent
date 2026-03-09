@@ -31,6 +31,15 @@ type Agent struct {
 	latestSnapshot atomic.Pointer[model.ClusterSnapshot]
 	ready          atomic.Bool
 	startedAt      time.Time
+
+	// Health tracking (accessed only from the main loop goroutine).
+	snapshotsSent       uint64
+	snapshotsFailed     uint64
+	snapshotsTotal      uint64
+	prevSnapshotsSent   uint64
+	prevSnapshotsFailed uint64
+	lastBuildMs         int64
+	lastSendMs          int64
 }
 
 // NewAgent creates an Agent with all required dependencies.
@@ -72,7 +81,7 @@ func (a *Agent) LatestSnapshot() interface{} {
 }
 
 // Run executes the agent lifecycle: start collectors, wait for sync,
-// then enter the snapshot-send loop until the context is canceled or
+// then enter the snapshot-send loop until the context is cancelled or
 // the state machine transitions to a terminal state.
 func (a *Agent) Run(ctx context.Context) error {
 	// Wire the cancel func into the state machine so 410 can trigger exit.
@@ -124,7 +133,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 
 	// 2b. Log post-sync store diagnostics so operators can verify counts.
-	a.logStoreCounts(ctx)
+	a.logStoreCounts()
 
 	// 3. Transition to Running.
 	a.stateMachine.TransitionTo(StateRunning, "informers synced")
@@ -171,8 +180,8 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 }
 
-func (a *Agent) logStoreCounts(ctx context.Context) {
-	snap := a.builder.Build(ctx)
+func (a *Agent) logStoreCounts() {
+	snap := a.builder.Build(context.Background())
 	slog.Info("post-sync store counts",
 		"nodes", len(snap.Nodes),
 		"pods", len(snap.Pods),
@@ -191,14 +200,27 @@ func (a *Agent) logStoreCounts(ctx context.Context) {
 }
 
 func (a *Agent) doSnapshot(ctx context.Context) {
+	// 1. Build snapshot and measure duration.
+	buildStart := time.Now()
 	snap := a.builder.Build(ctx)
+	a.lastBuildMs = time.Since(buildStart).Milliseconds()
+
+	// 2. Populate health before sending.
+	a.snapshotsTotal++
+	a.populateHealth(snap)
 	a.latestSnapshot.Store(snap)
 
+	// 3. Send and measure duration.
+	sendStart := time.Now()
 	resp, err := a.transport.Send(ctx, snap)
+	a.lastSendMs = time.Since(sendStart).Milliseconds()
+
 	if err != nil {
+		a.snapshotsFailed++
 		slog.Error("snapshot send failed", "error", err)
 		return
 	}
+	a.snapshotsSent++
 
 	state := a.stateMachine.State()
 	if state == StateStopped || state == StateExiting {
@@ -214,4 +236,72 @@ func (a *Agent) doSnapshot(ctx context.Context) {
 			"within_quota", resp.Quota.IsWithinQuota,
 		)
 	}
+}
+
+// populateHealth fills snap.Health with agent diagnostics.
+func (a *Agent) populateHealth(snap *model.ClusterSnapshot) {
+	h := &snap.Health
+
+	// Snapshot counters.
+	h.SnapshotsSentTotal = a.snapshotsSent
+	h.SnapshotsFailedTotal = a.snapshotsFailed
+	h.SnapshotsTotalCount = a.snapshotsTotal
+
+	// Per-interval deltas.
+	h.SnapshotsSentDelta = a.snapshotsSent - a.prevSnapshotsSent
+	h.SnapshotsFailedDelta = a.snapshotsFailed - a.prevSnapshotsFailed
+	a.prevSnapshotsSent = a.snapshotsSent
+	a.prevSnapshotsFailed = a.snapshotsFailed
+
+	// Agent state.
+	h.State = string(a.stateMachine.State())
+	h.StateReason = a.stateMachine.StateReason()
+
+	// Build duration (current snapshot). Send duration from previous snapshot.
+	h.LastBuildDurationMs = a.lastBuildMs
+	h.LastSendDurationMs = a.lastSendMs
+	h.LastMetricsCollectDurationMs = a.metrics.LastMetricsCollectMs.Load()
+
+	// Payload size from previous send (current is not yet sent).
+	stats := a.transport.LastSendStats()
+	h.OriginalSizeBytes = stats.OriginalBytes
+	h.CompressedSizeBytes = stats.CompressedBytes
+	h.EncodeDurationMs = stats.EncodeDurationMs
+	if stats.CompressedBytes > 0 {
+		h.CompressionFactor = float64(stats.OriginalBytes) / float64(stats.CompressedBytes)
+	}
+
+	// Entity counts from snapshot.
+	s := &snap.Summary
+	h.NodeCount = s.NodeCount
+	h.PodCount = s.PodCount
+	h.ContainerCount = s.ContainerCount
+	h.WorkloadCount = s.DeploymentCount + s.StatefulSetCount + s.DaemonSetCount +
+		s.JobCount + s.CronJobCount + s.CustomWorkloadCount
+	h.ServiceCount = s.ServiceCount
+	h.HPACount = s.HPACount
+	h.PDBCount = len(snap.PDBs)
+	h.PVCount = s.PVCount
+
+	// Data source availability.
+	h.MetricsServerAvailable = s.MetricsAvailable
+	h.GPUMetricsAvailable = s.GPUMetricsAvailable
+	h.VPAAvailable = len(snap.VPAs) > 0
+	h.KarpenterAvailable = len(snap.NodePools) > 0
+
+	// Informer health.
+	h.InformersSynced = a.ready.Load()
+	collectors := a.registry.Collectors()
+	h.InformersTotal = len(collectors)
+	h.InformersHealthy = len(collectors) // all started collectors are healthy
+
+	// Errors.
+	activeErrors := a.errorCollector.GetActiveErrors()
+	h.ActiveErrorsCount = len(activeErrors)
+	h.ErrorCodes = a.errorCollector.GetActiveErrorCodes()
+
+	// Uptime.
+	h.UptimeSeconds = int64(time.Since(a.startedAt) / time.Second)
+	h.StartedAt = a.startedAt.UnixMilli()
+	h.CollectedAt = time.Now().UnixMilli()
 }

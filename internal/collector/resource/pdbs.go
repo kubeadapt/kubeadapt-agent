@@ -41,15 +41,13 @@ func NewPDBCollector(client kubernetes.Interface, s *store.Store, m *observabili
 	}
 }
 
-// Name returns the collector name.
 func (c *PDBCollector) Name() string { return "pdbs" }
 
-// Start registers event handlers and begins the informer.
 func (c *PDBCollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Policy().V1().PodDisruptionBudgets().Informer()
 
-	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pdb, ok := obj.(*policyv1.PodDisruptionBudget)
 			if !ok {
@@ -86,9 +84,7 @@ func (c *PDBCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("pdbs", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("pdbs").Set(float64(c.store.PDBs.Len()))
 		},
-	}); err != nil {
-		return fmt.Errorf("failed to add event handler: %w", err)
-	}
+	})
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -97,7 +93,6 @@ func (c *PDBCollector) Start(_ context.Context) error {
 	return nil
 }
 
-// WaitForSync blocks until the informer cache is synced or ctx is canceled.
 func (c *PDBCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("pdbs informer cache sync failed")
@@ -105,7 +100,6 @@ func (c *PDBCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
-// Stop signals the collector to stop and waits for the goroutine to exit.
 func (c *PDBCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

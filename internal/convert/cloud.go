@@ -81,7 +81,7 @@ func parseAzureProviderID(providerID string) (instanceID, az, region string) {
 
 // ExtractCapacityType determines the capacity type (on-demand, spot, fargate)
 // from node labels. Returns lowercase normalized values.
-// Check order: EKS compute-type (fargate) → EKS capacityType → Karpenter → generic lifecycle
+// Check order: EKS compute-type (fargate) → EKS capacityType → Karpenter → Azure AKS → GKE preemptible → generic lifecycle
 func ExtractCapacityType(labels map[string]string) string {
 	if labels == nil {
 		return ""
@@ -109,6 +109,19 @@ func ExtractCapacityType(labels map[string]string) string {
 		return strings.ToLower(v)
 	}
 
+	// Azure AKS spot VMs
+	if v, ok := labels["kubernetes.azure.com/scalesetpriority"]; ok && strings.ToLower(v) == "spot" {
+		return "spot"
+	}
+
+	// GKE preemptible / spot VMs
+	if _, ok := labels["cloud.google.com/gke-preemptible"]; ok {
+		return "preemptible"
+	}
+	if v, ok := labels["cloud.google.com/gke-spot"]; ok && strings.ToLower(v) == "true" {
+		return "spot"
+	}
+
 	// Generic lifecycle label (some providers)
 	if v, ok := labels["node.kubernetes.io/lifecycle"]; ok {
 		switch strings.ToLower(v) {
@@ -124,8 +137,8 @@ func ExtractCapacityType(labels map[string]string) string {
 	return ""
 }
 
-// ExtractNodeGroup determines the node group name from node labels.
-// Check order: EKS nodegroup → Karpenter nodepool
+// ExtractNodeGroup determines the node group/pool name from node labels.
+// Check order: EKS nodegroup → Karpenter nodepool → GKE nodepool → AKS agentpool
 func ExtractNodeGroup(labels map[string]string) string {
 	if labels == nil {
 		return ""
@@ -135,6 +148,12 @@ func ExtractNodeGroup(labels map[string]string) string {
 		return v
 	}
 	if v, ok := labels["karpenter.sh/nodepool"]; ok {
+		return v
+	}
+	if v, ok := labels["cloud.google.com/gke-nodepool"]; ok {
+		return v
+	}
+	if v, ok := labels["kubernetes.azure.com/agentpool"]; ok {
 		return v
 	}
 	return ""

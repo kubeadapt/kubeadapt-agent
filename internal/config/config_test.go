@@ -11,7 +11,6 @@ func clearEnv(t *testing.T) {
 	t.Helper()
 	envVars := []string{
 		"KUBEADAPT_API_KEY",
-		"KUBEADAPT_CLUSTER_ID",
 		"KUBEADAPT_CLUSTER_NAME",
 		"KUBEADAPT_BACKEND_URL",
 		"KUBEADAPT_SNAPSHOT_INTERVAL",
@@ -43,9 +42,6 @@ func TestLoad_Defaults(t *testing.T) {
 
 	if cfg.APIKey != "test-key" {
 		t.Errorf("APIKey = %q, want %q", cfg.APIKey, "test-key")
-	}
-	if cfg.ClusterID == "" {
-		t.Error("ClusterID should be auto-generated when empty")
 	}
 	if cfg.BackendURL != "https://api.kubeadapt.io" {
 		t.Errorf("BackendURL = %q, want %q", cfg.BackendURL, "https://api.kubeadapt.io")
@@ -94,7 +90,6 @@ func TestLoad_Defaults(t *testing.T) {
 func TestLoad_AllEnvVars(t *testing.T) {
 	clearEnv(t)
 	t.Setenv("KUBEADAPT_API_KEY", "my-api-key")
-	t.Setenv("KUBEADAPT_CLUSTER_ID", "cluster-123")
 	t.Setenv("KUBEADAPT_CLUSTER_NAME", "prod-cluster")
 	t.Setenv("KUBEADAPT_BACKEND_URL", "https://custom.example.com")
 	t.Setenv("KUBEADAPT_SNAPSHOT_INTERVAL", "120s")
@@ -110,9 +105,6 @@ func TestLoad_AllEnvVars(t *testing.T) {
 
 	if cfg.APIKey != "my-api-key" {
 		t.Errorf("APIKey = %q, want %q", cfg.APIKey, "my-api-key")
-	}
-	if cfg.ClusterID != "cluster-123" {
-		t.Errorf("ClusterID = %q, want %q", cfg.ClusterID, "cluster-123")
 	}
 	if cfg.ClusterName != "prod-cluster" {
 		t.Errorf("ClusterName = %q, want %q", cfg.ClusterName, "prod-cluster")

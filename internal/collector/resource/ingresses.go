@@ -41,15 +41,13 @@ func NewIngressCollector(client kubernetes.Interface, s *store.Store, m *observa
 	}
 }
 
-// Name returns the collector name.
 func (c *IngressCollector) Name() string { return "ingresses" }
 
-// Start registers event handlers and begins the informer.
 func (c *IngressCollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Networking().V1().Ingresses().Informer()
 
-	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			ing, ok := obj.(*networkingv1.Ingress)
 			if !ok {
@@ -86,9 +84,7 @@ func (c *IngressCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("ingresses", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("ingresses").Set(float64(c.store.Ingresses.Len()))
 		},
-	}); err != nil {
-		return fmt.Errorf("failed to add event handler: %w", err)
-	}
+	})
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -97,7 +93,6 @@ func (c *IngressCollector) Start(_ context.Context) error {
 	return nil
 }
 
-// WaitForSync blocks until the informer cache is synced or ctx is canceled.
 func (c *IngressCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("ingresses informer cache sync failed")
@@ -105,7 +100,6 @@ func (c *IngressCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
-// Stop signals the collector to stop and waits for the goroutine to exit.
 func (c *IngressCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)
