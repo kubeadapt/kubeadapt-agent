@@ -2,7 +2,8 @@ name: Build & Push
 
 on:
   push:
-    branches: [main, develop]
+    branches: [develop]
+    tags: ['v*']
 
 permissions:
   id-token: write
