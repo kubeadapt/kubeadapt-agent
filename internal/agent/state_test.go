@@ -131,12 +131,12 @@ func TestStateHTTP410ExitingCallsCancel(t *testing.T) {
 	assert.Equal(t, StateExiting, sm.State())
 	assert.Equal(t, "agent deprecated", sm.StateReason())
 
-	// Context should be canceled
+	// Context should be cancelled
 	select {
 	case <-ctx.Done():
 		// expected
 	default:
-		t.Fatal("expected context to be canceled on 410")
+		t.Fatal("expected context to be cancelled on 410")
 	}
 }
 

@@ -36,9 +36,13 @@ import (
 	"github.com/kubeadapt/kubeadapt-agent/internal/transport"
 )
 
+// Version is set at build time via ldflags: -X main.Version=<value>
+var Version = "dev"
+
 func main() {
 	// 1. Load and validate config.
 	cfg := config.Load()
+	cfg.AgentVersion = config.ResolveAgentVersion(Version)
 	if err := cfg.Validate(); err != nil {
 		slog.Error("invalid configuration", "error", err)
 		os.Exit(1)
@@ -58,7 +62,6 @@ func main() {
 
 	slog.Info("kubeadapt-agent starting",
 		"version", cfg.AgentVersion,
-		"cluster_id", cfg.ClusterID,
 		"backend_url", cfg.BackendURL,
 		"snapshot_interval", cfg.SnapshotInterval,
 	)
@@ -182,7 +185,7 @@ func main() {
 	memMon := agent.NewMemoryPressureMonitor(0.8, func() { runtime.GC() }, 30*time.Second, nil)
 	memMon.Start()
 
-	// 11. Run agent (blocks until context is canceled).
+	// 11. Run agent (blocks until context is cancelled).
 	if err := ag.Run(ctx); err != nil && ctx.Err() == nil {
 		slog.Error("agent exited with error", "error", err)
 	}

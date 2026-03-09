@@ -41,15 +41,13 @@ func NewStorageClassCollector(client kubernetes.Interface, s *store.Store, m *ob
 	}
 }
 
-// Name returns the collector name.
 func (c *StorageClassCollector) Name() string { return "storageclasses" }
 
-// Start registers event handlers and begins the informer.
 func (c *StorageClassCollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Storage().V1().StorageClasses().Informer()
 
-	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			sc, ok := obj.(*storagev1.StorageClass)
 			if !ok {
@@ -86,9 +84,7 @@ func (c *StorageClassCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("storageclasses", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("storageclasses").Set(float64(c.store.StorageClasses.Len()))
 		},
-	}); err != nil {
-		return fmt.Errorf("failed to add event handler: %w", err)
-	}
+	})
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -97,7 +93,6 @@ func (c *StorageClassCollector) Start(_ context.Context) error {
 	return nil
 }
 
-// WaitForSync blocks until the informer cache is synced or ctx is canceled.
 func (c *StorageClassCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("storageclasses informer cache sync failed")
@@ -105,7 +100,6 @@ func (c *StorageClassCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
-// Stop signals the collector to stop and waits for the goroutine to exit.
 func (c *StorageClassCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

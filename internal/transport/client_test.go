@@ -43,7 +43,6 @@ func testSnapshot() *model.ClusterSnapshot {
 func testConfig(serverURL string) *config.Config {
 	return &config.Config{
 		APIKey:         "test-api-key-abc",
-		ClusterID:      "cluster-test",
 		BackendURL:     serverURL,
 		AgentVersion:   "v2.0.0-test",
 		MaxRetries:     0,
@@ -143,7 +142,6 @@ func TestClient_Send_Headers(t *testing.T) {
 		"Authorization":    "Bearer test-api-key-abc",
 		"Content-Type":     "application/json",
 		"Content-Encoding": "zstd",
-		"X-Cluster-Id":     "cluster-test",
 		"X-Agent-Version":  "v2.0.0-test",
 		"X-Snapshot-Id":    "snap-001",
 	}
@@ -450,7 +448,7 @@ func TestClient_Send_5xx_RetriedThenFails(t *testing.T) {
 // TestClient_Send_ContextCancellation verifies cancellation is respected.
 func TestClient_Send_ContextCancellation(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Slow server — should be canceled.
+		// Slow server — should be cancelled.
 		time.Sleep(5 * time.Second)
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -465,6 +463,6 @@ func TestClient_Send_ContextCancellation(t *testing.T) {
 
 	_, err := client.Send(ctx, testSnapshot())
 	if err == nil {
-		t.Fatal("expected error from canceled context")
+		t.Fatal("expected error from cancelled context")
 	}
 }

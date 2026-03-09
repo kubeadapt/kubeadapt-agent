@@ -108,6 +108,10 @@ type AgentHealth struct {
 	SnapshotsFailedTotal uint64 `json:"snapshots_failed_total"`
 	SnapshotsTotalCount  uint64 `json:"snapshots_total"`
 
+	// Per-interval deltas (since last report)
+	SnapshotsSentDelta   uint64 `json:"snapshots_sent_delta"`
+	SnapshotsFailedDelta uint64 `json:"snapshots_failed_delta"`
+
 	// Agent state
 	State       string `json:"state"`
 	StateReason string `json:"state_reason,omitempty"`
@@ -116,11 +120,12 @@ type AgentHealth struct {
 	LastBuildDurationMs          int64 `json:"last_build_duration_ms"`
 	LastMetricsCollectDurationMs int64 `json:"last_metrics_collect_duration_ms"`
 	LastSendDurationMs           int64 `json:"last_send_duration_ms"`
+	EncodeDurationMs             int64 `json:"encode_duration_ms"`
 
 	// Payload size
 	OriginalSizeBytes   int64   `json:"original_size_bytes"`
 	CompressedSizeBytes int64   `json:"compressed_size_bytes"`
-	CompressionRatio    float64 `json:"compression_ratio"`
+	CompressionFactor   float64 `json:"compression_factor"`
 
 	// Entity counts
 	NodeCount      int `json:"node_count"`

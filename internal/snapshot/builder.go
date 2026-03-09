@@ -3,7 +3,6 @@ package snapshot
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -84,9 +83,7 @@ func (b *SnapshotBuilder) Build(ctx context.Context) *model.ClusterSnapshot {
 	// Step 4: Resolve ownership (ReplicaSet → Deployment, Job → CronJob)
 	// before the main pipeline so aggregation uses top-level owners.
 	ownershipEnricher := enrichment.NewOwnershipEnricher(replicaSets)
-	if err := ownershipEnricher.Enrich(snap); err != nil {
-		slog.Warn("ownership enrichment failed", "error", err)
-	}
+	ownershipEnricher.Enrich(snap)
 
 	// Step 5: Run enrichment pipeline (aggregation, targets, mounts).
 	if b.pipeline != nil {
@@ -98,7 +95,6 @@ func (b *SnapshotBuilder) Build(ctx context.Context) *model.ClusterSnapshot {
 
 	// Step 7: Set identity fields.
 	snap.SnapshotID = uuid.New().String()
-	snap.ClusterID = b.config.ClusterID
 	snap.ClusterName = b.config.ClusterName
 	snap.Timestamp = time.Now().UnixMilli()
 	snap.AgentVersion = b.config.AgentVersion

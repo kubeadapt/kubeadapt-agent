@@ -11,7 +11,6 @@ import (
 	"time"
 )
 
-// CloudMetadata holds cloud provider identity information detected from instance metadata services.
 type CloudMetadata struct {
 	AccountID    string
 	Region       string
@@ -27,7 +26,6 @@ const (
 	azureIMDSBase   = "http://169.254.169.254"
 )
 
-// DetectCloudMetadata probes AWS, GCP, and Azure IMDS endpoints to identify the current cloud provider.
 func DetectCloudMetadata(ctx context.Context, timeout time.Duration) CloudMetadata {
 	client := &http.Client{Timeout: timeout}
 
@@ -202,7 +200,7 @@ func detectAzureURL(ctx context.Context, client *http.Client, base string) (Clou
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return CloudMetadata{}, fmt.Errorf("azure IMDS returned %d", resp.StatusCode)
+		return CloudMetadata{}, fmt.Errorf("Azure IMDS returned %d", resp.StatusCode)
 	}
 
 	var doc struct {

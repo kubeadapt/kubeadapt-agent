@@ -186,6 +186,46 @@ func TestExtractCapacityType_EKS_Fargate(t *testing.T) {
 	}
 }
 
+func TestExtractCapacityType_AKS_Spot(t *testing.T) {
+	labels := map[string]string{
+		"kubernetes.azure.com/scalesetpriority": "spot",
+	}
+	got := ExtractCapacityType(labels)
+	if got != "spot" {
+		t.Errorf("ExtractCapacityType = %q, want %q", got, "spot")
+	}
+}
+
+func TestExtractCapacityType_AKS_Spot_CaseInsensitive(t *testing.T) {
+	labels := map[string]string{
+		"kubernetes.azure.com/scalesetpriority": "Spot",
+	}
+	got := ExtractCapacityType(labels)
+	if got != "spot" {
+		t.Errorf("ExtractCapacityType = %q, want %q", got, "spot")
+	}
+}
+
+func TestExtractCapacityType_GKE_Preemptible(t *testing.T) {
+	labels := map[string]string{
+		"cloud.google.com/gke-preemptible": "true",
+	}
+	got := ExtractCapacityType(labels)
+	if got != "preemptible" {
+		t.Errorf("ExtractCapacityType = %q, want %q", got, "preemptible")
+	}
+}
+
+func TestExtractCapacityType_GKE_Spot(t *testing.T) {
+	labels := map[string]string{
+		"cloud.google.com/gke-spot": "true",
+	}
+	got := ExtractCapacityType(labels)
+	if got != "spot" {
+		t.Errorf("ExtractCapacityType = %q, want %q", got, "spot")
+	}
+}
+
 func TestExtractNodeGroup_EKS(t *testing.T) {
 	labels := map[string]string{
 		"eks.amazonaws.com/nodegroup": "my-node-group",
@@ -228,6 +268,39 @@ func TestExtractNodeGroup_EKS_Priority(t *testing.T) {
 	labels := map[string]string{
 		"eks.amazonaws.com/nodegroup": "eks-group",
 		"karpenter.sh/nodepool":       "karpenter-pool",
+	}
+	got := ExtractNodeGroup(labels)
+	if got != "eks-group" {
+		t.Errorf("ExtractNodeGroup = %q, want %q (EKS should take priority)", got, "eks-group")
+	}
+}
+
+func TestExtractNodeGroup_GKE(t *testing.T) {
+	labels := map[string]string{
+		"cloud.google.com/gke-nodepool": "default-pool",
+	}
+	got := ExtractNodeGroup(labels)
+	if got != "default-pool" {
+		t.Errorf("ExtractNodeGroup = %q, want %q", got, "default-pool")
+	}
+}
+
+func TestExtractNodeGroup_AKS(t *testing.T) {
+	labels := map[string]string{
+		"kubernetes.azure.com/agentpool": "spot",
+	}
+	got := ExtractNodeGroup(labels)
+	if got != "spot" {
+		t.Errorf("ExtractNodeGroup = %q, want %q", got, "spot")
+	}
+}
+
+func TestExtractNodeGroup_EKS_Priority_Over_GKE_AKS(t *testing.T) {
+	// EKS label takes priority over all others
+	labels := map[string]string{
+		"eks.amazonaws.com/nodegroup":    "eks-group",
+		"cloud.google.com/gke-nodepool":  "gke-pool",
+		"kubernetes.azure.com/agentpool": "aks-pool",
 	}
 	got := ExtractNodeGroup(labels)
 	if got != "eks-group" {

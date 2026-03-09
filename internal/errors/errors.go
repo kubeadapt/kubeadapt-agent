@@ -8,7 +8,6 @@ import (
 // Code represents a typed error code understood by the backend.
 type Code string
 
-// Agent error codes reported to the backend.
 const (
 	ErrMetricsUnavailable  Code = "METRICS_UNAVAILABLE"
 	ErrInformerSyncFailed  Code = "INFORMER_SYNC_FAILED"

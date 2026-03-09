@@ -5,14 +5,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // Config holds all agent configuration values.
 type Config struct {
 	APIKey               string
-	ClusterID            string
 	ClusterName          string
 	BackendURL           string
 	SnapshotInterval     time.Duration
@@ -27,8 +24,8 @@ type Config struct {
 	AgentVersion         string
 
 	// Security
-	AllowInsecure  bool // KUBEADAPT_ALLOW_INSECURE, default: false — allows http:// BackendURL
-	DebugEndpoints bool // KUBEADAPT_DEBUG_ENDPOINTS, default: false — enables pprof/debug on health port
+	AllowInsecure    bool // KUBEADAPT_ALLOW_INSECURE, default: false — allows http:// BackendURL
+	DebugEndpoints   bool // KUBEADAPT_DEBUG_ENDPOINTS, default: false — enables pprof/debug on health port
 
 	// GPU monitoring
 	GPUMetricsEnabled     bool          // KUBEADAPT_GPU_METRICS_ENABLED, default: true
@@ -43,7 +40,6 @@ type Config struct {
 func Load() Config {
 	cfg := Config{
 		APIKey:               os.Getenv("KUBEADAPT_API_KEY"),
-		ClusterID:            os.Getenv("KUBEADAPT_CLUSTER_ID"),
 		ClusterName:          os.Getenv("KUBEADAPT_CLUSTER_NAME"),
 		BackendURL:           envOrDefault("KUBEADAPT_BACKEND_URL", "https://api.kubeadapt.io"),
 		SnapshotInterval:     parseDuration("KUBEADAPT_SNAPSHOT_INTERVAL", 60*time.Second),
@@ -57,9 +53,6 @@ func Load() Config {
 		HealthPort:           parseInt("KUBEADAPT_HEALTH_PORT", 8080),
 	}
 
-	if cfg.ClusterID == "" {
-		cfg.ClusterID = uuid.New().String()
-	}
 
 	cfg.AllowInsecure = parseBool("KUBEADAPT_ALLOW_INSECURE", false)
 	cfg.DebugEndpoints = parseBool("KUBEADAPT_DEBUG_ENDPOINTS", false)
@@ -151,4 +144,21 @@ func parseInt64(key string, defaultVal int64) int64 {
 		return defaultVal
 	}
 	return n
+}
+
+// ResolveAgentVersion determines the agent version using this precedence:
+//  1. Build-time ldflags value (main.Version)
+//  2. KUBEADAPT_AGENT_VERSION env var (Helm chart / runtime override)
+//  3. "dev" fallback
+func ResolveAgentVersion(buildVersion string) string {
+	if buildVersion != "" && buildVersion != "dev" {
+		return buildVersion
+	}
+	if v := os.Getenv("KUBEADAPT_AGENT_VERSION"); v != "" {
+		return v
+	}
+	if buildVersion != "" {
+		return buildVersion
+	}
+	return "dev"
 }
