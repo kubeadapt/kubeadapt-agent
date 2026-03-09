@@ -3,7 +3,7 @@ version: "2"
 run:
   timeout: 5m
   tests: true
-  go: "1.23"
+  go: "1.26"
   concurrency: 4
   # Skip vendor and generated code
   skip-dirs:
@@ -18,39 +18,39 @@ linters:
   # Balanced production-quality linters
   enable:
     # Core checks (existing)
-    - errcheck      # Check for unchecked errors
-    - govet         # Vet examines Go source code
-    - ineffassign   # Detect ineffectual assignments
-    - staticcheck   # Advanced static analysis
-    - unused        # Check for unused code
-    - unconvert     # Remove unnecessary type conversions
-    - misspell      # Spelling errors
-    - goconst       # Repeated strings that could be constants
+    - errcheck # Check for unchecked errors
+    - govet # Vet examines Go source code
+    - ineffassign # Detect ineffectual assignments
+    - staticcheck # Advanced static analysis
+    - unused # Check for unused code
+    - unconvert # Remove unnecessary type conversions
+    - misspell # Spelling errors
+    - goconst # Repeated strings that could be constants
 
     # Security
-    - gosec         # Security problems
+    - gosec # Security problems
 
     # Bugs & Errors
-    - bodyclose     # HTTP response body closed
-    - errchkjson    # Check JSON encode/decode errors
-    - nilerr        # Find nil errors being returned
-    - errorlint     # Error wrapping issues (Go 1.13+)
+    - bodyclose # HTTP response body closed
+    - errchkjson # Check JSON encode/decode errors
+    - nilerr # Find nil errors being returned
+    - errorlint # Error wrapping issues (Go 1.13+)
 
     # Performance
-    - prealloc      # Find slice declarations that could be preallocated
+    - prealloc # Find slice declarations that could be preallocated
 
     # Style & Code Quality
-    - revive        # Fast, configurable, extensible linter
-    - whitespace    # Detect unnecessary whitespace
+    - revive # Fast, configurable, extensible linter
+    - whitespace # Detect unnecessary whitespace
 
     # Context & Concurrency
-    - contextcheck  # Check context.Context usage
+    - contextcheck # Check context.Context usage
 
   disable:
     # Disable noisy or opinionated linters
-    - wrapcheck     # Too strict for most codebases
-    - varnamelen    # Variable name length checks (too opinionated)
-    - gocyclo       # Cyclomatic complexity (covered by gocognit if needed)
+    - wrapcheck # Too strict for most codebases
+    - varnamelen # Variable name length checks (too opinionated)
+    - gocyclo # Cyclomatic complexity (covered by gocognit if needed)
 
   settings:
     errcheck:
@@ -64,8 +64,8 @@ linters:
     govet:
       enable-all: true
       disable:
-        - fieldalignment  # Too strict for most cases
-        - shadow          # Can be noisy
+        - fieldalignment # Too strict for most cases
+        - shadow # Can be noisy
 
     goconst:
       min-len: 3
@@ -95,7 +95,7 @@ linters:
         - name: increment-decrement
         - name: var-naming
         - name: package-comments
-          disabled: true  # Often too strict
+          disabled: true # Often too strict
         - name: range
         - name: receiver-naming
         - name: indent-error-flow
@@ -109,10 +109,10 @@ linters:
       # Test files - relax rules
       - path: _test\.go
         linters:
-          - errcheck      # Allow unchecked errors in tests
-          - gosec         # Allow security issues in tests
-          - goconst       # Repeated strings OK in tests
-          - revive        # Style less important in tests
+          - errcheck # Allow unchecked errors in tests
+          - gosec # Allow security issues in tests
+          - goconst # Repeated strings OK in tests
+          - revive # Style less important in tests
 
       # Exclude long test functions
       - path: _test\.go
@@ -125,6 +125,27 @@ linters:
           - godox
         text: "TODO"
 
+      # Exclude SA1019 deprecated NewSimpleClientset in test files — no stable replacement for k8s fake client yet
+      - path: _test\.go
+        linters:
+          - staticcheck
+        text: "SA1019:.*NewSimpleClientset is deprecated"
+
+      # Exclude revive stuttering names — renaming would be a breaking API change
+      - linters:
+          - revive
+        text: "type name will be used as"
+
+      # Exclude revive var-naming for internal/errors package — renaming package would be disruptive
+      - linters:
+          - revive
+        text: "avoid package names that conflict with Go standard library"
+
+      # Exclude errchkjson in health server — _ assignment pattern intentional
+      - path: internal/health/server\.go
+        linters:
+          - errchkjson
+
 issues:
   # Show all issues
   max-issues-per-linter: 0
@@ -135,7 +156,7 @@ issues:
     # Exclude some staticcheck messages
     - linters:
         - staticcheck
-      text: "SA1019:"  # Deprecated function usage (sometimes unavoidable)
+      text: "SA1019:" # Deprecated function usage (sometimes unavoidable)
 
     # Exclude gosec G104 for specific cases (covered by errcheck)
     - linters:
