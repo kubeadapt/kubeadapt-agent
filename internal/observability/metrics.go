@@ -1,6 +1,8 @@
 package observability
 
 import (
+	"sync/atomic"
+
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -37,6 +39,9 @@ type Metrics struct {
 	// Compression metrics
 	CompressionRatio    prometheus.Gauge
 	CompressionDuration prometheus.Histogram
+	// LastMetricsCollectMs stores the most recent metrics-server poll
+	// duration in milliseconds, updated atomically by the MetricsCollector.
+	LastMetricsCollectMs atomic.Int64
 }
 
 // NewMetrics creates a new Metrics instance with all Prometheus metrics

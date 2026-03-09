@@ -16,7 +16,6 @@ import (
 // benchDeps creates all SnapshotBuilder dependencies for benchmarking.
 func benchDeps() (*store.Store, *store.MetricsStore, *config.Config, *observability.Metrics, *errors.ErrorCollector) {
 	cfg := &config.Config{
-		ClusterID:    "bench-cluster",
 		ClusterName:  "bench",
 		AgentVersion: "bench-0.0.1",
 	}

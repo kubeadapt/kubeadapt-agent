@@ -23,7 +23,6 @@ func NewOwnershipEnricher(replicaSets []model.ReplicaSetInfo) *OwnershipEnricher
 	return &OwnershipEnricher{replicaSets: replicaSets}
 }
 
-// Name returns the enricher name.
 func (o *OwnershipEnricher) Name() string { return "ownership" }
 
 // Enrich resolves ownership for each pod in the snapshot.

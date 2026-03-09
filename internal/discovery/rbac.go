@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	authorizationv1 "k8s.io/api/authorization/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
@@ -57,10 +56,7 @@ func hasResource(discoveryClient discovery.DiscoveryInterface, group, version, r
 	resources, err := discoveryClient.ServerResourcesForGroupVersion(groupVersion)
 	if err != nil {
 		// If the group/version is not found, treat as resource missing — not an error.
-		if errors.IsNotFound(err) {
-			return false, nil
-		}
-		return false, err
+		return false, nil
 	}
 
 	for _, r := range resources.APIResources {

@@ -13,7 +13,6 @@ func NewAggregationEnricher() *AggregationEnricher {
 	return &AggregationEnricher{}
 }
 
-// Name returns the enricher name.
 func (a *AggregationEnricher) Name() string { return "aggregation" }
 
 // Enrich aggregates pod resources into workload totals.

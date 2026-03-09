@@ -14,14 +14,6 @@ const (
 	labelAKSNodepoolName = "kubernetes.azure.com/agentpool"
 )
 
-// Provider name constants.
-const (
-	providerAWS     = "aws"
-	providerGCP     = "gcp"
-	providerAzure   = "azure"
-	providerUnknown = "unknown"
-)
-
 // DetectProvider determines the cloud provider from node metadata.
 // It inspects spec.providerID prefixes and provider-specific labels on the
 // first available node. Pure function — no API calls.
@@ -29,7 +21,7 @@ const (
 // Returns "aws", "gcp", "azure", or "unknown".
 func DetectProvider(nodes []*v1.Node) string {
 	if len(nodes) == 0 {
-		return providerUnknown
+		return "unknown"
 	}
 
 	node := nodes[0]
@@ -44,18 +36,18 @@ func DetectProvider(nodes []*v1.Node) string {
 		return provider
 	}
 
-	return providerUnknown
+	return "unknown"
 }
 
 // providerFromID extracts the provider name from a node's spec.providerID.
 func providerFromID(providerID string) string {
 	switch {
 	case strings.HasPrefix(providerID, "aws://"):
-		return providerAWS
+		return "aws"
 	case strings.HasPrefix(providerID, "gce://"):
-		return providerGCP
+		return "gcp"
 	case strings.HasPrefix(providerID, "azure://"):
-		return providerAzure
+		return "azure"
 	default:
 		return ""
 	}
@@ -68,16 +60,16 @@ func providerFromLabels(labels map[string]string) string {
 	}
 
 	if _, ok := labels[labelEKSNodeGroup]; ok {
-		return providerAWS
+		return "aws"
 	}
 	if _, ok := labels[labelEKSCapacity]; ok {
-		return providerAWS
+		return "aws"
 	}
 	if _, ok := labels[labelGKENodePool]; ok {
-		return providerGCP
+		return "gcp"
 	}
 	if _, ok := labels[labelAKSNodepoolName]; ok {
-		return providerAzure
+		return "azure"
 	}
 
 	return ""

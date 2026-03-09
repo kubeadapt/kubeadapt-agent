@@ -1,5 +1,5 @@
 # Build stage - use native platform for faster compilation
-FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS builder
 
 # Build arguments for version injection
 ARG VERSION=dev
@@ -25,14 +25,21 @@ COPY . .
 # Build the application for target platform with version info
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
     -ldflags="-w -s -X main.Version=${VERSION} -X main.CommitHash=${COMMIT_HASH} -X main.BuildTime=${BUILD_TIME}" \
-    -o app ./cmd/agent
+    -o kubeadapt-agent ./cmd/agent
 
-# Runtime stage - distroless for minimal attack surface
-FROM gcr.io/distroless/static:nonroot
+# Runtime stage - use distroless for minimal attack surface
+FROM gcr.io/distroless/static-debian12
 
 WORKDIR /
 
-# Copy the binary from builder stage
-COPY --from=builder /app/app /app
+# Copy binary from builder
+COPY --from=builder /app/kubeadapt-agent .
 
-ENTRYPOINT ["/app"]
+# Run as non-root
+USER nonroot:nonroot
+
+# Expose health port
+EXPOSE 8086
+
+# Run the application
+ENTRYPOINT ["/kubeadapt-agent"]

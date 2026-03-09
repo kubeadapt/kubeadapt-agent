@@ -48,15 +48,13 @@ func NewVPACollector(dynamicClient dynamic.Interface, s *store.Store, m *observa
 	}
 }
 
-// Name returns the collector name.
 func (c *VPACollector) Name() string { return "vpas" }
 
-// Start registers event handlers and begins the informer.
 func (c *VPACollector) Start(_ context.Context) error {
 	factory := dynamicinformer.NewDynamicSharedInformerFactory(c.dynamicClient, c.resyncPeriod)
 	c.informer = factory.ForResource(vpaGVR).Informer()
 
-	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			u, ok := obj.(*unstructured.Unstructured)
 			if !ok {
@@ -93,9 +91,7 @@ func (c *VPACollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("vpas", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("vpas").Set(float64(c.store.VPAs.Len()))
 		},
-	}); err != nil {
-		return fmt.Errorf("failed to add event handler: %w", err)
-	}
+	})
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -104,7 +100,6 @@ func (c *VPACollector) Start(_ context.Context) error {
 	return nil
 }
 
-// WaitForSync blocks until the informer cache is synced or ctx is canceled.
 func (c *VPACollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("vpas informer cache sync failed")
@@ -112,7 +107,6 @@ func (c *VPACollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
-// Stop signals the collector to stop and waits for the goroutine to exit.
 func (c *VPACollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

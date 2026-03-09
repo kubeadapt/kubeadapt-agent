@@ -41,15 +41,13 @@ func NewCronJobCollector(client kubernetes.Interface, s *store.Store, m *observa
 	}
 }
 
-// Name returns the collector name.
 func (c *CronJobCollector) Name() string { return "cronjobs" }
 
-// Start registers event handlers and begins the informer.
 func (c *CronJobCollector) Start(_ context.Context) error {
 	factory := informers.NewSharedInformerFactory(c.client, c.resyncPeriod)
 	c.informer = factory.Batch().V1().CronJobs().Informer()
 
-	if _, err := c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	c.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			cj, ok := obj.(*batchv1.CronJob)
 			if !ok {
@@ -86,9 +84,7 @@ func (c *CronJobCollector) Start(_ context.Context) error {
 			c.metrics.InformerEventsTotal.WithLabelValues("cronjobs", "delete").Inc()
 			c.metrics.StoreItems.WithLabelValues("cronjobs").Set(float64(c.store.CronJobs.Len()))
 		},
-	}); err != nil {
-		return fmt.Errorf("failed to add event handler: %w", err)
-	}
+	})
 
 	go func() {
 		c.informer.Run(c.stopCh)
@@ -97,7 +93,6 @@ func (c *CronJobCollector) Start(_ context.Context) error {
 	return nil
 }
 
-// WaitForSync blocks until the informer cache is synced or ctx is canceled.
 func (c *CronJobCollector) WaitForSync(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		return fmt.Errorf("cronjobs informer cache sync failed")
@@ -105,7 +100,6 @@ func (c *CronJobCollector) WaitForSync(ctx context.Context) error {
 	return nil
 }
 
-// Stop signals the collector to stop and waits for the goroutine to exit.
 func (c *CronJobCollector) Stop() {
 	c.stopOnce.Do(func() {
 		close(c.stopCh)

@@ -19,7 +19,6 @@ func newTestDeps() (*store.Store, *store.MetricsStore, *config.Config, *observab
 	s := store.NewStore()
 	ms := store.NewMetricsStore()
 	cfg := &config.Config{
-		ClusterID:    "test-cluster-id",
 		ClusterName:  "test-cluster",
 		AgentVersion: "v0.1.0",
 	}
@@ -38,7 +37,6 @@ func TestBuild_ProducesValidSnapshotWithUUID(t *testing.T) {
 	require.NotNil(t, snap)
 	assert.NotEmpty(t, snap.SnapshotID, "SnapshotID should be a UUID")
 	assert.Len(t, snap.SnapshotID, 36, "UUID should be 36 chars")
-	assert.Equal(t, "test-cluster-id", snap.ClusterID)
 	assert.Equal(t, "test-cluster", snap.ClusterName)
 	assert.Equal(t, "v0.1.0", snap.AgentVersion)
 	assert.Greater(t, snap.Timestamp, int64(0))

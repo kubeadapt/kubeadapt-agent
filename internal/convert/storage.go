@@ -22,7 +22,7 @@ func PVToModel(pv *corev1.PersistentVolume) model.PVInfo {
 	}
 
 	// Capacity
-	info.Capacity = quantityValue(pv.Spec.Capacity, corev1.ResourceStorage)
+	info.Capacity = quantityValue(corev1.ResourceList(pv.Spec.Capacity), corev1.ResourceStorage)
 
 	// AccessModes
 	if len(pv.Spec.AccessModes) > 0 {
@@ -134,7 +134,7 @@ func PVCToModel(pvc *corev1.PersistentVolumeClaim) model.PVCInfo {
 	info.RequestedBytes = quantityValue(pvc.Spec.Resources.Requests, corev1.ResourceStorage)
 
 	// CapacityBytes
-	info.CapacityBytes = quantityValue(pvc.Status.Capacity, corev1.ResourceStorage)
+	info.CapacityBytes = quantityValue(corev1.ResourceList(pvc.Status.Capacity), corev1.ResourceStorage)
 
 	// Conditions
 	info.Conditions = convertPVCConditions(pvc.Status.Conditions)
