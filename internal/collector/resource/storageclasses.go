@@ -112,3 +112,8 @@ func (c *StorageClassCollector) Stop() {
 	})
 	<-c.done
 }
+
+// IsHealthy implements collector.HealthChecker.
+func (c *StorageClassCollector) IsHealthy() (bool, string) {
+	return informerHealthy(c.stopCh, c.done)
+}

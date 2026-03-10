@@ -30,3 +30,26 @@ docker:
 
 clean:
 	rm -rf bin/
+
+# E2E Testing
+E2E_AGENT_IMAGE ?= localhost/kubeadapt-agent:e2e-test
+E2E_STUB_IMAGE  ?= localhost/ingestion-stub:e2e-test
+E2E_TIMEOUT     ?= 30m
+
+.PHONY: test-e2e test-e2e-build test-e2e-run
+
+test-e2e: test-e2e-build test-e2e-run
+
+test-e2e-build:
+	@echo "→ Building agent image $(E2E_AGENT_IMAGE)"
+	docker build -t $(E2E_AGENT_IMAGE) \
+		--build-arg VERSION=e2e-test \
+		--build-arg COMMIT_HASH=$(COMMIT_HASH) \
+		--build-arg BUILD_TIME=$(BUILD_TIME) \
+		.
+	@echo "→ Building ingestion stub image $(E2E_STUB_IMAGE)"
+	docker build -t $(E2E_STUB_IMAGE) \
+		-f tests/e2e/stub/Dockerfile .
+
+test-e2e-run:
+	go test -v -timeout $(E2E_TIMEOUT) ./tests/e2e/...

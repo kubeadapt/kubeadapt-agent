@@ -112,3 +112,8 @@ func (c *JobCollector) Stop() {
 	})
 	<-c.done
 }
+
+// IsHealthy implements collector.HealthChecker.
+func (c *JobCollector) IsHealthy() (bool, string) {
+	return informerHealthy(c.stopCh, c.done)
+}

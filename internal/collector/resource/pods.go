@@ -117,3 +117,8 @@ func (c *PodCollector) Stop() {
 	})
 	<-c.done
 }
+
+// IsHealthy implements collector.HealthChecker.
+func (c *PodCollector) IsHealthy() (bool, string) {
+	return informerHealthy(c.stopCh, c.done)
+}

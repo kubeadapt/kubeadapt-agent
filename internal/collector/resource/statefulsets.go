@@ -112,3 +112,8 @@ func (c *StatefulSetCollector) Stop() {
 	})
 	<-c.done
 }
+
+// IsHealthy implements collector.HealthChecker.
+func (c *StatefulSetCollector) IsHealthy() (bool, string) {
+	return informerHealthy(c.stopCh, c.done)
+}

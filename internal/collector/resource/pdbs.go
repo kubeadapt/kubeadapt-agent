@@ -112,3 +112,8 @@ func (c *PDBCollector) Stop() {
 	})
 	<-c.done
 }
+
+// IsHealthy implements collector.HealthChecker.
+func (c *PDBCollector) IsHealthy() (bool, string) {
+	return informerHealthy(c.stopCh, c.done)
+}

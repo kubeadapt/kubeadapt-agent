@@ -112,3 +112,8 @@ func (c *ServiceCollector) Stop() {
 	})
 	<-c.done
 }
+
+// IsHealthy implements collector.HealthChecker.
+func (c *ServiceCollector) IsHealthy() (bool, string) {
+	return informerHealthy(c.stopCh, c.done)
+}

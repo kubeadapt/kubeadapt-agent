@@ -112,3 +112,8 @@ func (c *NodeCollector) Stop() {
 	})
 	<-c.done
 }
+
+// IsHealthy implements collector.HealthChecker.
+func (c *NodeCollector) IsHealthy() (bool, string) {
+	return informerHealthy(c.stopCh, c.done)
+}

@@ -117,3 +117,8 @@ func (c *DeploymentCollector) Stop() {
 	})
 	<-c.done
 }
+
+// IsHealthy implements collector.HealthChecker.
+func (c *DeploymentCollector) IsHealthy() (bool, string) {
+	return informerHealthy(c.stopCh, c.done)
+}

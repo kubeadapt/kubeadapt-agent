@@ -112,3 +112,8 @@ func (c *PVCollector) Stop() {
 	})
 	<-c.done
 }
+
+// IsHealthy implements collector.HealthChecker.
+func (c *PVCollector) IsHealthy() (bool, string) {
+	return informerHealthy(c.stopCh, c.done)
+}

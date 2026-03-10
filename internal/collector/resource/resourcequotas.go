@@ -112,3 +112,8 @@ func (c *ResourceQuotaCollector) Stop() {
 	})
 	<-c.done
 }
+
+// IsHealthy implements collector.HealthChecker.
+func (c *ResourceQuotaCollector) IsHealthy() (bool, string) {
+	return informerHealthy(c.stopCh, c.done)
+}

@@ -349,3 +349,206 @@ func TestRegistry_StopAllEmpty(t *testing.T) {
 	// Should not panic.
 	r.StopAll()
 }
+
+// healthyCollector implements both Collector and HealthChecker, always healthy.
+type healthyCollector struct {
+	name string
+}
+
+func (c *healthyCollector) Name() string                        { return c.name }
+func (c *healthyCollector) Start(_ context.Context) error       { return nil }
+func (c *healthyCollector) WaitForSync(_ context.Context) error { return nil }
+func (c *healthyCollector) Stop()                               {}
+func (c *healthyCollector) IsHealthy() (bool, string)           { return true, "" }
+
+// unhealthyCollector implements both Collector and HealthChecker, always unhealthy.
+type unhealthyCollector struct {
+	name   string
+	reason string
+}
+
+func (c *unhealthyCollector) Name() string                        { return c.name }
+func (c *unhealthyCollector) Start(_ context.Context) error       { return nil }
+func (c *unhealthyCollector) WaitForSync(_ context.Context) error { return nil }
+func (c *unhealthyCollector) Stop()                               {}
+func (c *unhealthyCollector) IsHealthy() (bool, string)           { return false, c.reason }
+
+func TestRegistry_HealthReportAllHealthy(t *testing.T) {
+	r := NewRegistry()
+
+	r.Register(&healthyCollector{name: "nodes"})
+	r.Register(&healthyCollector{name: "pods"})
+	r.Register(&healthyCollector{name: "deployments"})
+
+	healthy, total, stale := r.HealthReport()
+	if total != 3 {
+		t.Errorf("expected total=3, got %d", total)
+	}
+	if healthy != 3 {
+		t.Errorf("expected healthy=3, got %d", healthy)
+	}
+	if len(stale) != 0 {
+		t.Errorf("expected no stale resources, got %v", stale)
+	}
+}
+
+func TestRegistry_HealthReportSomeUnhealthy(t *testing.T) {
+	r := NewRegistry()
+
+	r.Register(&healthyCollector{name: "nodes"})
+	r.Register(&unhealthyCollector{name: "pods", reason: "goroutine crashed"})
+	r.Register(&healthyCollector{name: "deployments"})
+	r.Register(&unhealthyCollector{name: "services", reason: "connection lost"})
+
+	healthy, total, stale := r.HealthReport()
+	if total != 4 {
+		t.Errorf("expected total=4, got %d", total)
+	}
+	if healthy != 2 {
+		t.Errorf("expected healthy=2, got %d", healthy)
+	}
+	if len(stale) != 2 {
+		t.Errorf("expected 2 stale resources, got %d: %v", len(stale), stale)
+	}
+}
+
+func TestRegistry_HealthReportWithNonHealthChecker(t *testing.T) {
+	r := NewRegistry()
+
+	// mockCollector does NOT implement HealthChecker — should be assumed healthy.
+	r.Register(&mockCollector{name: "legacy"})
+	r.Register(&healthyCollector{name: "nodes"})
+	r.Register(&unhealthyCollector{name: "pods", reason: "crashed"})
+
+	healthy, total, stale := r.HealthReport()
+	if total != 3 {
+		t.Errorf("expected total=3, got %d", total)
+	}
+	if healthy != 2 {
+		t.Errorf("expected healthy=2 (legacy assumed healthy + nodes), got %d", healthy)
+	}
+	if len(stale) != 1 {
+		t.Errorf("expected 1 stale resource, got %d: %v", len(stale), stale)
+	}
+}
+
+func TestRegistry_HealthReportEmpty(t *testing.T) {
+	r := NewRegistry()
+
+	healthy, total, stale := r.HealthReport()
+	if total != 0 {
+		t.Errorf("expected total=0, got %d", total)
+	}
+	if healthy != 0 {
+		t.Errorf("expected healthy=0, got %d", healthy)
+	}
+	if len(stale) != 0 {
+		t.Errorf("expected no stale, got %v", stale)
+	}
+}
+
+// apiCallCollector implements Collector + APICallCounter.
+type apiCallCollector struct {
+	name       string
+	callTotal  int64
+	callFailed int64
+}
+
+func (c *apiCallCollector) Name() string                        { return c.name }
+func (c *apiCallCollector) Start(_ context.Context) error       { return nil }
+func (c *apiCallCollector) WaitForSync(_ context.Context) error { return nil }
+func (c *apiCallCollector) Stop()                               {}
+func (c *apiCallCollector) APICallStats() (total, failed int64) {
+	return c.callTotal, c.callFailed
+}
+
+func TestRegistry_APICallReportAggregate(t *testing.T) {
+	r := NewRegistry()
+
+	// MetricsCollector-like: 100 total, 2 failed.
+	r.Register(&apiCallCollector{name: "metrics", callTotal: 100, callFailed: 2})
+	// GPUMetricsCollector-like: 50 total, 5 failed.
+	r.Register(&apiCallCollector{name: "gpu", callTotal: 50, callFailed: 5})
+	// Regular informer collector — no APICallCounter.
+	r.Register(&mockCollector{name: "nodes"})
+
+	total, failed := r.APICallReport()
+	if total != 150 {
+		t.Errorf("expected total=150, got %d", total)
+	}
+	if failed != 7 {
+		t.Errorf("expected failed=7, got %d", failed)
+	}
+}
+
+func TestRegistry_APICallReportEmpty(t *testing.T) {
+	r := NewRegistry()
+
+	total, failed := r.APICallReport()
+	if total != 0 {
+		t.Errorf("expected total=0, got %d", total)
+	}
+	if failed != 0 {
+		t.Errorf("expected failed=0, got %d", failed)
+	}
+}
+
+func TestRegistry_APICallReportNoAPICallers(t *testing.T) {
+	r := NewRegistry()
+
+	r.Register(&mockCollector{name: "nodes"})
+	r.Register(&mockCollector{name: "pods"})
+
+	total, failed := r.APICallReport()
+	if total != 0 {
+		t.Errorf("expected total=0 when no APICallCounter collectors, got %d", total)
+	}
+	if failed != 0 {
+		t.Errorf("expected failed=0, got %d", failed)
+	}
+}
+
+// dcgmCollector implements Collector + DCGMTargetReporter.
+type dcgmCollector struct {
+	name      string
+	targets   int
+	upTargets int
+}
+
+func (c *dcgmCollector) Name() string                        { return c.name }
+func (c *dcgmCollector) Start(_ context.Context) error       { return nil }
+func (c *dcgmCollector) WaitForSync(_ context.Context) error { return nil }
+func (c *dcgmCollector) Stop()                               {}
+func (c *dcgmCollector) DCGMTargetStats() (targets, upTargets int) {
+	return c.targets, c.upTargets
+}
+
+func TestRegistry_DCGMTargetReport(t *testing.T) {
+	r := NewRegistry()
+
+	r.Register(&mockCollector{name: "nodes"})
+	r.Register(&dcgmCollector{name: "gpu", targets: 3, upTargets: 2})
+
+	targets, upTargets := r.DCGMTargetReport()
+	if targets != 3 {
+		t.Errorf("expected targets=3, got %d", targets)
+	}
+	if upTargets != 2 {
+		t.Errorf("expected upTargets=2, got %d", upTargets)
+	}
+}
+
+func TestRegistry_DCGMTargetReportNone(t *testing.T) {
+	r := NewRegistry()
+
+	r.Register(&mockCollector{name: "nodes"})
+	r.Register(&mockCollector{name: "pods"})
+
+	targets, upTargets := r.DCGMTargetReport()
+	if targets != 0 {
+		t.Errorf("expected targets=0, got %d", targets)
+	}
+	if upTargets != 0 {
+		t.Errorf("expected upTargets=0, got %d", upTargets)
+	}
+}

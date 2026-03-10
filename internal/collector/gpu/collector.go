@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -21,6 +22,14 @@ type GPUMetricsCollector struct {
 
 	mu      sync.RWMutex
 	metrics []GPUDeviceMetrics
+
+	// API call counters — each poll() scrapes N endpoints (one HTTP call per endpoint).
+	scrapeTotal  atomic.Int64
+	scrapeFailed atomic.Int64
+
+	// DCGM target tracking — updated each poll for health reporting.
+	lastTargets   atomic.Int64
+	lastUpTargets atomic.Int64
 }
 
 // NewGPUMetricsCollector creates a GPUMetricsCollector that polls dcgm-exporter endpoints.
@@ -95,15 +104,23 @@ func (c *GPUMetricsCollector) run(ctx context.Context) {
 func (c *GPUMetricsCollector) poll(ctx context.Context) {
 	endpoints := c.endpointsFn()
 	if len(endpoints) == 0 {
+		c.lastTargets.Store(0)
+		c.lastUpTargets.Store(0)
 		slog.Debug("gpu collector: no dcgm-exporter endpoints configured")
 		return
 	}
 
+	c.lastTargets.Store(int64(len(endpoints)))
+	c.scrapeTotal.Add(int64(len(endpoints)))
 	metrics, err := c.api.ScrapeGPUMetrics(ctx, endpoints)
 	if err != nil {
+		c.scrapeFailed.Add(int64(len(endpoints)))
+		c.lastUpTargets.Store(0)
 		slog.Warn("gpu collector: failed to scrape GPU metrics", "error", err)
 		return
 	}
+
+	c.lastUpTargets.Store(int64(len(endpoints)))
 
 	now := time.Now().UnixMilli()
 	for i := range metrics {
@@ -115,4 +132,32 @@ func (c *GPUMetricsCollector) poll(ctx context.Context) {
 	c.mu.Unlock()
 
 	slog.Debug("gpu collector: poll complete", "gpu_count", len(metrics))
+}
+
+// IsHealthy implements collector.HealthChecker.
+// Reports unhealthy if the polling goroutine exited unexpectedly.
+func (c *GPUMetricsCollector) IsHealthy() (bool, string) {
+	select {
+	case <-c.done:
+		select {
+		case <-c.stopCh:
+			return true, ""
+		default:
+			return false, "GPU metrics polling goroutine exited unexpectedly"
+		}
+	default:
+		return true, ""
+	}
+}
+
+// APICallStats returns cumulative API call counters.
+// Each poll() makes one HTTP scrape call per dcgm-exporter endpoint.
+func (c *GPUMetricsCollector) APICallStats() (total, failed int64) {
+	return c.scrapeTotal.Load(), c.scrapeFailed.Load()
+}
+
+// DCGMTargetStats returns the number of dcgm-exporter targets and how many
+// responded successfully in the most recent poll.
+func (c *GPUMetricsCollector) DCGMTargetStats() (targets, upTargets int) {
+	return int(c.lastTargets.Load()), int(c.lastUpTargets.Load())
 }

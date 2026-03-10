@@ -112,3 +112,8 @@ func (c *HPACollector) Stop() {
 	})
 	<-c.done
 }
+
+// IsHealthy implements collector.HealthChecker.
+func (c *HPACollector) IsHealthy() (bool, string) {
+	return informerHealthy(c.stopCh, c.done)
+}

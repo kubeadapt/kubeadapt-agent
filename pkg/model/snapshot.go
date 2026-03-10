@@ -152,24 +152,16 @@ type AgentHealth struct {
 	StaleResources   []string `json:"stale_resources,omitempty"`
 
 	// API calls
-	APICallsTotal       int   `json:"api_calls_total"`
-	APICallsFailedCount int   `json:"api_calls_failed"`
-	MetricsAPICallMs    int64 `json:"metrics_api_call_ms"`
+	APICallsTotal       int `json:"api_calls_total"`
+	APICallsFailedCount int `json:"api_calls_failed"`
 
 	// Errors
-	ActiveErrorsCount   int      `json:"active_errors_count"`
-	ActiveWarningsCount int      `json:"active_warnings_count"`
-	ErrorCodes          []string `json:"error_codes,omitempty"`
+	ActiveErrorsCount int      `json:"active_errors_count"`
+	ErrorCodes        []string `json:"error_codes,omitempty"`
 
 	// Uptime
 	UptimeSeconds int64 `json:"uptime_seconds"`
 	StartedAt     int64 `json:"started_at"`
-
-	// Quota (from last backend response)
-	QuotaPlanType   string  `json:"quota_plan_type,omitempty"`
-	QuotaCPULimit   float64 `json:"quota_cpu_limit,omitempty"`
-	QuotaCPUCurrent float64 `json:"quota_cpu_current,omitempty"`
-	QuotaIsWithin   bool    `json:"quota_is_within"`
 
 	CollectedAt int64 `json:"collected_at"`
 
