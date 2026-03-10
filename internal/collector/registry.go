@@ -155,3 +155,62 @@ func (r *Registry) Collectors() []Collector {
 	copy(out, r.collectors)
 	return out
 }
+
+// HealthReport returns the number of healthy collectors, the total count,
+// and a list of collector names that are unhealthy (stale resources).
+// Collectors that do not implement HealthChecker are assumed healthy.
+func (r *Registry) HealthReport() (healthy int, total int, stale []string) {
+	r.mu.Lock()
+	collectors := make([]Collector, len(r.collectors))
+	copy(collectors, r.collectors)
+	r.mu.Unlock()
+
+	total = len(collectors)
+	for _, c := range collectors {
+		if hc, ok := c.(HealthChecker); ok {
+			if h, _ := hc.IsHealthy(); h {
+				healthy++
+			} else {
+				stale = append(stale, c.Name())
+			}
+		} else {
+			// No HealthChecker interface — assume healthy if registered.
+			healthy++
+		}
+	}
+	return healthy, total, stale
+}
+
+// APICallReport returns the aggregate API call statistics across all collectors
+// that implement the APICallCounter interface.
+func (r *Registry) APICallReport() (total, failed int64) {
+	r.mu.Lock()
+	collectors := make([]Collector, len(r.collectors))
+	copy(collectors, r.collectors)
+	r.mu.Unlock()
+
+	for _, c := range collectors {
+		if ac, ok := c.(APICallCounter); ok {
+			t, f := ac.APICallStats()
+			total += t
+			failed += f
+		}
+	}
+	return total, failed
+}
+
+// DCGMTargetReport returns the dcgm-exporter target counts from the first
+// collector that implements DCGMTargetReporter (typically GPUMetricsCollector).
+func (r *Registry) DCGMTargetReport() (targets, upTargets int) {
+	r.mu.Lock()
+	collectors := make([]Collector, len(r.collectors))
+	copy(collectors, r.collectors)
+	r.mu.Unlock()
+
+	for _, c := range collectors {
+		if dr, ok := c.(DCGMTargetReporter); ok {
+			return dr.DCGMTargetStats()
+		}
+	}
+	return 0, 0
+}

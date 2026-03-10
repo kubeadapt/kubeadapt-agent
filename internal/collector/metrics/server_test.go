@@ -249,3 +249,70 @@ func TestMetricsCollector_HandlesAPIErrors(t *testing.T) {
 	assert.Equal(t, 0, ms.NodeMetrics.Len())
 	assert.Equal(t, 0, ms.PodMetrics.Len())
 }
+
+func TestMetricsCollector_APICallStats_CountsSuccessfulPolls(t *testing.T) {
+	ts := metav1.Now()
+	mock := &mockMetricsAPI{
+		nodeMetrics: []metricsv1beta1.NodeMetrics{
+			{ObjectMeta: metav1.ObjectMeta{Name: "n1"}, Timestamp: ts,
+				Usage: map[corev1.ResourceName]resource.Quantity{"cpu": resource.MustParse("1"), "memory": resource.MustParse("1Gi")}},
+		},
+		podMetrics: []metricsv1beta1.PodMetrics{
+			{ObjectMeta: metav1.ObjectMeta{Name: "p1", Namespace: "default"}, Timestamp: ts,
+				Containers: []metricsv1beta1.ContainerMetrics{{Name: "c", Usage: map[corev1.ResourceName]resource.Quantity{"cpu": resource.MustParse("100m"), "memory": resource.MustParse("64Mi")}}}},
+		},
+	}
+
+	ms := store.NewMetricsStore()
+	c := NewMetricsCollector(mock, ms, observability.NewMetrics(), 50*time.Millisecond)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err := c.Start(ctx)
+	require.NoError(t, err)
+	defer c.Stop()
+
+	err = c.WaitForSync(ctx)
+	require.NoError(t, err)
+
+	// First poll happens on start. Wait for at least 2 polls.
+	require.Eventually(t, func() bool {
+		total, _ := c.APICallStats()
+		return total >= 4 // 2 calls per poll * 2 polls
+	}, waitTimeout, pollInterval)
+
+	total, failed := c.APICallStats()
+	assert.True(t, total >= 4, "expected at least 4 API calls (2 per poll), got %d", total)
+	assert.Equal(t, int64(0), failed)
+}
+
+func TestMetricsCollector_APICallStats_CountsFailures(t *testing.T) {
+	mock := &mockMetricsAPI{
+		nodeErr: fmt.Errorf("node metrics unavailable"),
+		podErr:  fmt.Errorf("pod metrics unavailable"),
+	}
+
+	ms := store.NewMetricsStore()
+	c := NewMetricsCollector(mock, ms, observability.NewMetrics(), 50*time.Millisecond)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err := c.Start(ctx)
+	require.NoError(t, err)
+	defer c.Stop()
+
+	err = c.WaitForSync(ctx)
+	require.NoError(t, err)
+
+	// Wait for at least 1 poll.
+	require.Eventually(t, func() bool {
+		total, _ := c.APICallStats()
+		return total >= 2
+	}, waitTimeout, pollInterval)
+
+	total, failed := c.APICallStats()
+	assert.True(t, total >= 2, "expected at least 2 API calls, got %d", total)
+	assert.Equal(t, total, failed, "all calls should be failures")
+}

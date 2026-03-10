@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,6 +56,10 @@ type MetricsCollector struct {
 
 	syncOnce sync.Once
 	synced   chan struct{}
+
+	// API call counters — each poll() makes 2 calls (ListNodeMetrics + ListPodMetrics).
+	pollTotal  atomic.Int64
+	pollFailed atomic.Int64
 }
 
 // NewMetricsCollector creates a MetricsCollector that polls using the given MetricsAPI.
@@ -134,8 +139,10 @@ func (c *MetricsCollector) poll(ctx context.Context) {
 }
 
 func (c *MetricsCollector) pollNodeMetrics(ctx context.Context) {
+	c.pollTotal.Add(1)
 	nodeMetricsList, err := c.api.ListNodeMetrics(ctx)
 	if err != nil {
+		c.pollFailed.Add(1)
 		slog.Error("failed to list node metrics", "error", err)
 		return
 	}
@@ -152,8 +159,10 @@ func (c *MetricsCollector) pollNodeMetrics(ctx context.Context) {
 }
 
 func (c *MetricsCollector) pollPodMetrics(ctx context.Context) {
+	c.pollTotal.Add(1)
 	podMetricsList, err := c.api.ListPodMetrics(ctx)
 	if err != nil {
+		c.pollFailed.Add(1)
 		slog.Error("failed to list pod metrics", "error", err)
 		return
 	}
@@ -177,4 +186,26 @@ func (c *MetricsCollector) pollPodMetrics(ctx context.Context) {
 			Timestamp:  pm.Timestamp.UnixMilli(),
 		})
 	}
+}
+
+// IsHealthy implements collector.HealthChecker.
+// Reports unhealthy if the polling goroutine exited unexpectedly.
+func (c *MetricsCollector) IsHealthy() (bool, string) {
+	select {
+	case <-c.done:
+		select {
+		case <-c.stopCh:
+			return true, ""
+		default:
+			return false, "metrics polling goroutine exited unexpectedly"
+		}
+	default:
+		return true, ""
+	}
+}
+
+// APICallStats returns cumulative API call counters.
+// Each poll() makes 2 API calls: ListNodeMetrics + ListPodMetrics.
+func (c *MetricsCollector) APICallStats() (total, failed int64) {
+	return c.pollTotal.Load(), c.pollFailed.Load()
 }

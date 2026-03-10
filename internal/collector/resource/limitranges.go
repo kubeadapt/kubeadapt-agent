@@ -112,3 +112,8 @@ func (c *LimitRangeCollector) Stop() {
 	})
 	<-c.done
 }
+
+// IsHealthy implements collector.HealthChecker.
+func (c *LimitRangeCollector) IsHealthy() (bool, string) {
+	return informerHealthy(c.stopCh, c.done)
+}

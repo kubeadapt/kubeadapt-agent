@@ -1,0 +1,271 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-workloads
+  labels:
+    purpose: e2e-test
+---
+# Deployment 1 — nginx (target for HPA)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-web
+  namespace: test-workloads
+  labels:
+    app: nginx-web
+    tier: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-web
+  template:
+    metadata:
+      labels:
+        app: nginx-web
+        tier: frontend
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi
+---
+# Deployment 2 — simple busybox (no HPA)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: test-workloads
+  labels:
+    app: worker
+    tier: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+        tier: backend
+    spec:
+      containers:
+        - name: worker
+          image: busybox:1.37
+          command: ["sleep", "3600"]
+          resources:
+            requests:
+              cpu: 5m
+              memory: 8Mi
+            limits:
+              cpu: 20m
+              memory: 16Mi
+---
+# HPA for nginx-web
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nginx-web-hpa
+  namespace: test-workloads
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nginx-web
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+# StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cache
+  namespace: test-workloads
+  labels:
+    app: cache
+spec:
+  serviceName: cache-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cache
+  template:
+    metadata:
+      labels:
+        app: cache
+    spec:
+      containers:
+        - name: cache
+          image: busybox:1.37
+          command: ["sleep", "3600"]
+          ports:
+            - containerPort: 6379
+              name: tcp
+          resources:
+            requests:
+              cpu: 5m
+              memory: 8Mi
+            limits:
+              cpu: 20m
+              memory: 16Mi
+---
+# DaemonSet
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: monitor
+  namespace: test-workloads
+  labels:
+    app: monitor
+spec:
+  selector:
+    matchLabels:
+      app: monitor
+  template:
+    metadata:
+      labels:
+        app: monitor
+    spec:
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: monitor
+          image: busybox:1.37
+          command: ["sleep", "3600"]
+          resources:
+            requests:
+              cpu: 5m
+              memory: 8Mi
+            limits:
+              cpu: 10m
+              memory: 16Mi
+---
+# Job — long-running so it's active during tests
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: batch-job
+  namespace: test-workloads
+  labels:
+    app: batch-job
+spec:
+  template:
+    metadata:
+      labels:
+        app: batch-job
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: job
+          image: busybox:1.37
+          command: ["sleep", "300"]
+          resources:
+            requests:
+              cpu: 5m
+              memory: 8Mi
+---
+# CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: periodic
+  namespace: test-workloads
+  labels:
+    app: periodic
+spec:
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: periodic
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: task
+              image: busybox:1.37
+              command: ["echo", "periodic task"]
+              resources:
+                requests:
+                  cpu: 5m
+                  memory: 8Mi
+---
+# Service — ClusterIP for nginx
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-web
+  namespace: test-workloads
+  labels:
+    app: nginx-web
+spec:
+  type: ClusterIP
+  selector:
+    app: nginx-web
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+---
+# Service — Headless for StatefulSet
+apiVersion: v1
+kind: Service
+metadata:
+  name: cache-headless
+  namespace: test-workloads
+  labels:
+    app: cache
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: cache
+  ports:
+    - port: 6379
+      targetPort: 6379
+      name: tcp
+---
+# PVC — uses Kind's default local-path provisioner
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data-pvc
+  namespace: test-workloads
+  labels:
+    app: storage-test
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+---
+# PodDisruptionBudget for nginx-web
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nginx-web-pdb
+  namespace: test-workloads
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: nginx-web

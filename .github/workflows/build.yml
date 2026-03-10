@@ -13,8 +13,9 @@ jobs:
   build-and-push:
     uses: kubeadapt/public-actions/.github/workflows/aws-golang-public-service.yml@main
     with:
-      ecr_repository_name: w3l5x6r6/kubeadapt/app/${{ github.event.repository.name }}
+      ecr_repository_name: kubeadapt/app/${{ github.event.repository.name }}
       aws_role_to_assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
+      ecr_public_alias: w3l5x6r6
     secrets:
       PLATFORM_ASSISTANT_GH_APP_ID: ${{ secrets.PLATFORM_ASSISTANT_GH_APP_ID }}
       PLATFORM_ASSISTANT_GH_APP_PRIVATE_KEY: ${{ secrets.PLATFORM_ASSISTANT_GH_APP_PRIVATE_KEY }}

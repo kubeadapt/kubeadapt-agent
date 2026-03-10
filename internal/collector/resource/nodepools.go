@@ -120,6 +120,11 @@ func (c *NodePoolCollector) Stop() {
 	<-c.done
 }
 
+// IsHealthy implements collector.HealthChecker.
+func (c *NodePoolCollector) IsHealthy() (bool, string) {
+	return informerHealthy(c.stopCh, c.done)
+}
+
 // nodePoolToModel converts an unstructured Karpenter NodePool to model.NodePoolInfo.
 func nodePoolToModel(obj *unstructured.Unstructured) model.NodePoolInfo {
 	info := model.NodePoolInfo{

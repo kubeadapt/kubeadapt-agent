@@ -30,6 +30,7 @@ settings:
     - docs
     - ci
     - deps
+    - health
     - security
     - test
     - build

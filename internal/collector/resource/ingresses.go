@@ -112,3 +112,8 @@ func (c *IngressCollector) Stop() {
 	})
 	<-c.done
 }
+
+// IsHealthy implements collector.HealthChecker.
+func (c *IngressCollector) IsHealthy() (bool, string) {
+	return informerHealthy(c.stopCh, c.done)
+}

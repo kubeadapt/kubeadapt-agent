@@ -119,3 +119,8 @@ func (c *VPACollector) Stop() {
 	})
 	<-c.done
 }
+
+// IsHealthy implements collector.HealthChecker.
+func (c *VPACollector) IsHealthy() (bool, string) {
+	return informerHealthy(c.stopCh, c.done)
+}

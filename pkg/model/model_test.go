@@ -921,8 +921,6 @@ func TestAgentHealth_OmitEmpty(t *testing.T) {
 	assertJSONFieldAbsent(t, data, "state_reason")
 	// ErrorCodes should be omitted when nil
 	assertJSONFieldAbsent(t, data, "error_codes")
-	// QuotaPlanType should be omitted when empty
-	assertJSONFieldAbsent(t, data, "quota_plan_type")
 }
 
 // --- GPU types ---

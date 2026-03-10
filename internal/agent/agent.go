@@ -205,8 +205,7 @@ func (a *Agent) doSnapshot(ctx context.Context) {
 	snap := a.builder.Build(ctx)
 	a.lastBuildMs = time.Since(buildStart).Milliseconds()
 
-	// 2. Populate health before sending.
-	a.snapshotsTotal++
+	// 2. Populate health before sending (counters reflect completed operations only).
 	a.populateHealth(snap)
 	a.latestSnapshot.Store(snap)
 
@@ -215,6 +214,8 @@ func (a *Agent) doSnapshot(ctx context.Context) {
 	resp, err := a.transport.Send(ctx, snap)
 	a.lastSendMs = time.Since(sendStart).Milliseconds()
 
+	// 4. Update counters after send completes.
+	a.snapshotsTotal++
 	if err != nil {
 		a.snapshotsFailed++
 		slog.Error("snapshot send failed", "error", err)
@@ -288,18 +289,22 @@ func (a *Agent) populateHealth(snap *model.ClusterSnapshot) {
 	h.GPUMetricsAvailable = s.GPUMetricsAvailable
 	h.VPAAvailable = len(snap.VPAs) > 0
 	h.KarpenterAvailable = len(snap.NodePools) > 0
-
+	h.DCGMExporterTargets, h.DCGMExporterUpTargets = a.registry.DCGMTargetReport()
 	// Informer health.
 	h.InformersSynced = a.ready.Load()
-	collectors := a.registry.Collectors()
-	h.InformersTotal = len(collectors)
-	h.InformersHealthy = len(collectors) // all started collectors are healthy
+	healthy, total, stale := a.registry.HealthReport()
+	h.InformersTotal = total
+	h.InformersHealthy = healthy
+	h.StaleResources = stale
+	// API call counters (MetricsCollector + GPUMetricsCollector polls).
+	apiTotal, apiFailed := a.registry.APICallReport()
+	h.APICallsTotal = int(apiTotal)
+	h.APICallsFailedCount = int(apiFailed)
 
 	// Errors.
 	activeErrors := a.errorCollector.GetActiveErrors()
 	h.ActiveErrorsCount = len(activeErrors)
 	h.ErrorCodes = a.errorCollector.GetActiveErrorCodes()
-
 	// Uptime.
 	h.UptimeSeconds = int64(time.Since(a.startedAt) / time.Second)
 	h.StartedAt = a.startedAt.UnixMilli()

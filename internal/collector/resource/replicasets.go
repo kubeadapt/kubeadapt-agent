@@ -113,3 +113,8 @@ func (c *ReplicaSetCollector) Stop() {
 	})
 	<-c.done
 }
+
+// IsHealthy implements collector.HealthChecker.
+func (c *ReplicaSetCollector) IsHealthy() (bool, string) {
+	return informerHealthy(c.stopCh, c.done)
+}

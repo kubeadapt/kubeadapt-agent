@@ -112,3 +112,8 @@ func (c *PriorityClassCollector) Stop() {
 	})
 	<-c.done
 }
+
+// IsHealthy implements collector.HealthChecker.
+func (c *PriorityClassCollector) IsHealthy() (bool, string) {
+	return informerHealthy(c.stopCh, c.done)
+}

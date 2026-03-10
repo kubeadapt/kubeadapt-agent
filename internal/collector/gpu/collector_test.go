@@ -2,6 +2,7 @@ package gpu
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -223,4 +224,164 @@ func TestGPUMetricsCollector_GetGPUMetrics_ReturnsCopy(t *testing.T) {
 
 	m1[0].GPU = "modified"
 	assert.Equal(t, "0", m2[0].GPU, "modifying one copy should not affect the other")
+}
+
+func TestGPUMetricsCollector_APICallStats_CountsScrapes(t *testing.T) {
+	util := 42.0
+	mock := &mockGPUMetricsAPI{
+		metrics: []GPUDeviceMetrics{
+			{GPU: "0", UUID: "GPU-stats", GPUUtilization: &util},
+		},
+	}
+
+	endpoints := []string{"http://10.0.0.1:9400", "http://10.0.0.2:9400"}
+	c := NewGPUMetricsCollector(mock, func() []string {
+		return endpoints
+	}, 50*time.Millisecond)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err := c.Start(ctx)
+	require.NoError(t, err)
+	defer c.Stop()
+
+	err = c.WaitForSync(ctx)
+	require.NoError(t, err)
+
+	// First poll happens immediately. Wait for at least 2 polls.
+	require.Eventually(t, func() bool {
+		total, _ := c.APICallStats()
+		return total >= 4 // 2 endpoints * 2 polls
+	}, testWaitTimeout, testPollInterval)
+
+	total, failed := c.APICallStats()
+	assert.True(t, total >= 4, "expected at least 4 scrapes (2 endpoints * 2 polls), got %d", total)
+	assert.Equal(t, int64(0), failed)
+}
+
+func TestGPUMetricsCollector_APICallStats_CountsFailures(t *testing.T) {
+	mock := &mockGPUMetricsAPI{
+		err: fmt.Errorf("scrape failed"),
+	}
+
+	endpoints := []string{"http://10.0.0.1:9400", "http://10.0.0.2:9400"}
+	c := NewGPUMetricsCollector(mock, func() []string {
+		return endpoints
+	}, 50*time.Millisecond)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err := c.Start(ctx)
+	require.NoError(t, err)
+	defer c.Stop()
+
+	err = c.WaitForSync(ctx)
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		total, _ := c.APICallStats()
+		return total >= 2
+	}, testWaitTimeout, testPollInterval)
+
+	total, failed := c.APICallStats()
+	assert.True(t, total >= 2, "expected at least 2 scrape attempts, got %d", total)
+	assert.Equal(t, total, failed, "all scrapes should be failures")
+}
+
+func TestGPUMetricsCollector_APICallStats_NoEndpoints(t *testing.T) {
+	mock := &mockGPUMetricsAPI{}
+	c := NewGPUMetricsCollector(mock, func() []string {
+		return nil
+	}, 50*time.Millisecond)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err := c.Start(ctx)
+	require.NoError(t, err)
+	defer c.Stop()
+
+	err = c.WaitForSync(ctx)
+	require.NoError(t, err)
+
+	// With no endpoints, no API calls should be made.
+	time.Sleep(150 * time.Millisecond)
+	total, failed := c.APICallStats()
+	assert.Equal(t, int64(0), total)
+	assert.Equal(t, int64(0), failed)
+}
+
+func TestGPUMetricsCollector_DCGMTargetStats_Success(t *testing.T) {
+	util := 42.0
+	mock := &mockGPUMetricsAPI{
+		metrics: []GPUDeviceMetrics{
+			{GPU: "0", UUID: "GPU-target", GPUUtilization: &util},
+		},
+	}
+
+	endpoints := []string{"http://10.0.0.1:9400", "http://10.0.0.2:9400", "http://10.0.0.3:9400"}
+	c := NewGPUMetricsCollector(mock, func() []string {
+		return endpoints
+	}, time.Hour)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err := c.Start(ctx)
+	require.NoError(t, err)
+	defer c.Stop()
+
+	err = c.WaitForSync(ctx)
+	require.NoError(t, err)
+
+	targets, upTargets := c.DCGMTargetStats()
+	assert.Equal(t, 3, targets, "should report 3 targets")
+	assert.Equal(t, 3, upTargets, "all 3 should be up on successful scrape")
+}
+
+func TestGPUMetricsCollector_DCGMTargetStats_Failure(t *testing.T) {
+	mock := &mockGPUMetricsAPI{
+		err: fmt.Errorf("scrape failed"),
+	}
+
+	endpoints := []string{"http://10.0.0.1:9400", "http://10.0.0.2:9400"}
+	c := NewGPUMetricsCollector(mock, func() []string {
+		return endpoints
+	}, time.Hour)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err := c.Start(ctx)
+	require.NoError(t, err)
+	defer c.Stop()
+
+	err = c.WaitForSync(ctx)
+	require.NoError(t, err)
+
+	targets, upTargets := c.DCGMTargetStats()
+	assert.Equal(t, 2, targets, "should report 2 targets")
+	assert.Equal(t, 0, upTargets, "0 up on failed scrape")
+}
+
+func TestGPUMetricsCollector_DCGMTargetStats_NoEndpoints(t *testing.T) {
+	c := NewGPUMetricsCollector(&mockGPUMetricsAPI{}, func() []string {
+		return nil
+	}, time.Hour)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err := c.Start(ctx)
+	require.NoError(t, err)
+	defer c.Stop()
+
+	err = c.WaitForSync(ctx)
+	require.NoError(t, err)
+
+	targets, upTargets := c.DCGMTargetStats()
+	assert.Equal(t, 0, targets)
+	assert.Equal(t, 0, upTargets)
 }

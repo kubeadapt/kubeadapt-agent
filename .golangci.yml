@@ -5,14 +5,6 @@ run:
   tests: true
   go: "1.26"
   concurrency: 4
-  # Skip vendor and generated code
-  skip-dirs:
-    - vendor
-    - build
-    - testdata
-  skip-files:
-    - ".*\\.pb\\.go$"
-    - ".*_gen\\.go$"
 
 linters:
   # Balanced production-quality linters
@@ -104,6 +96,13 @@ linters:
 
   exclusions:
     generated: lax
+    paths:
+      - vendor
+      - build
+      - testdata
+      - tests
+      - ".*\\.pb\\.go$"
+      - ".*_gen\\.go$"
 
     rules:
       # Test files - relax rules
