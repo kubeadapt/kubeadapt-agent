@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"runtime"
 	"testing"
@@ -19,10 +20,10 @@ import (
 )
 
 const (
-	// agentImageName is the local Docker image name for the agent.
-	agentImageName = "localhost/kubeadapt-agent:e2e-test"
-	// stubImageName is the local Docker image name for the ingestion stub.
-	stubImageName = "localhost/ingestion-stub:e2e-test"
+	// defaultAgentImage is the default local Docker image name for the agent.
+	defaultAgentImage = "localhost/kubeadapt-agent:e2e-test"
+	// defaultStubImage is the default local Docker image name for the ingestion stub.
+	defaultStubImage = "localhost/ingestion-stub:e2e-test"
 	// kindNodeImage is the Kind node image to use.
 	kindNodeImage = "kindest/node:v1.32.8"
 	// logsDir is the subdirectory for storing cluster logs.
@@ -57,6 +58,8 @@ func (c *Cluster) Run(m *testing.M) int {
 
 	// Setup functions to run before tests
 	setupFuncs := []env.Func{
+		// Prepare images: retag CI images if needed, build stub if missing
+		c.prepareImages(),
 		// Create Kind cluster
 		envfuncs.CreateClusterWithConfig(
 			kind.NewProvider(),
@@ -64,9 +67,9 @@ func (c *Cluster) Run(m *testing.M) int {
 			kindConfigPath,
 			kind.WithImage(kindNodeImage),
 		),
-		// Load images into cluster
-		c.loadImage(agentImageName),
-		c.loadImage(stubImageName),
+		// Load images into cluster (always use default names — prepareImages ensures they exist)
+		c.loadImage(defaultAgentImage),
+		c.loadImage(defaultStubImage),
 	}
 
 	// Add deployment functions
@@ -101,6 +104,38 @@ func (c *Cluster) AddDeployment(dep Deployment) {
 	c.deployments = append(c.deployments, dep)
 }
 
+// prepareImages ensures the required Docker images exist with the expected names.
+// In CI, the agent image may be tagged differently (e.g. :test instead of :e2e-test).
+// This function retags CI images and builds the stub image if not present.
+func (c *Cluster) prepareImages() env.Func {
+	return func(ctx context.Context, _ *envconf.Config) (context.Context, error) {
+		// Handle agent image: retag if CI provides a different tag via E2E_AGENT_IMAGE.
+		if src := os.Getenv("E2E_AGENT_IMAGE"); src != "" && src != defaultAgentImage {
+			fmt.Printf("→ Retagging agent image %s → %s\n", src, defaultAgentImage)
+			if err := dockerTag(src, defaultAgentImage); err != nil {
+				return ctx, fmt.Errorf("retag agent image: %w", err)
+			}
+		}
+
+		// Handle stub image: retag from env, or build from source if not present.
+		if src := os.Getenv("E2E_STUB_IMAGE"); src != "" && src != defaultStubImage {
+			fmt.Printf("→ Retagging stub image %s → %s\n", src, defaultStubImage)
+			if err := dockerTag(src, defaultStubImage); err != nil {
+				return ctx, fmt.Errorf("retag stub image: %w", err)
+			}
+		} else if !dockerImageExists(defaultStubImage) {
+			fmt.Printf("→ Building stub image %s from source\n", defaultStubImage)
+			// Stub Dockerfile is at tests/e2e/stub/Dockerfile, context is repo root.
+			repoRoot := path.Join(c.baseDir, "..", "..")
+			if err := dockerBuild(defaultStubImage, path.Join(c.baseDir, "stub", "Dockerfile"), repoRoot); err != nil {
+				return ctx, fmt.Errorf("build stub image: %w", err)
+			}
+		}
+
+		return ctx, nil
+	}
+}
+
 // loadImage loads a Docker image into the Kind cluster.
 func (c *Cluster) loadImage(imageName string) env.Func {
 	return func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
@@ -127,11 +162,13 @@ func (c *Cluster) getDeploymentFuncs() []env.Func {
 
 	for _, dep := range sorted {
 		if dep.Order != currentOrder {
-			fmt.Printf("→ Waiting for %s deployments to be ready\n", orderName(currentOrder))
+			// Wrap status messages in env.Func so they print during execution, not construction.
+			waitOrder := currentOrder
 			funcs = append(funcs, readyFuncs...)
+			funcs = append(funcs, logFunc("→ %s deployments ready", orderName(waitOrder)))
 			readyFuncs = nil
 			currentOrder = dep.Order
-			fmt.Printf("→ Starting %s deployments\n", orderName(currentOrder))
+			funcs = append(funcs, logFunc("→ Starting %s deployments", orderName(currentOrder)))
 		}
 
 		funcs = append(funcs, dep.DeployFunc)
@@ -142,8 +179,9 @@ func (c *Cluster) getDeploymentFuncs() []env.Func {
 	}
 
 	if len(readyFuncs) > 0 {
-		fmt.Printf("→ Waiting for %s deployments to be ready\n", orderName(currentOrder))
+		waitOrder := currentOrder
 		funcs = append(funcs, readyFuncs...)
+		funcs = append(funcs, logFunc("→ %s deployments ready", orderName(waitOrder)))
 	}
 
 	return funcs
@@ -247,4 +285,35 @@ func orderName(order DeployOrder) string {
 	default:
 		return fmt.Sprintf("Unknown(%d)", order)
 	}
+}
+
+// logFunc wraps a fmt.Printf call in an env.Func for deferred execution.
+func logFunc(format string, args ...any) env.Func {
+	return func(ctx context.Context, _ *envconf.Config) (context.Context, error) {
+		fmt.Printf(format+"\n", args...)
+		return ctx, nil
+	}
+}
+
+// dockerTag retags a Docker image.
+func dockerTag(src, dst string) error {
+	cmd := exec.Command("docker", "tag", src, dst)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("%s: %w", string(out), err)
+	}
+	return nil
+}
+
+// dockerImageExists checks if a Docker image exists locally.
+func dockerImageExists(image string) bool {
+	cmd := exec.Command("docker", "image", "inspect", image)
+	return cmd.Run() == nil
+}
+
+// dockerBuild builds a Docker image from a Dockerfile.
+func dockerBuild(tag, dockerfile, context string) error {
+	cmd := exec.Command("docker", "build", "-t", tag, "-f", dockerfile, context)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
