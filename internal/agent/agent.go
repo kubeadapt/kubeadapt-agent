@@ -205,8 +205,7 @@ func (a *Agent) doSnapshot(ctx context.Context) {
 	snap := a.builder.Build(ctx)
 	a.lastBuildMs = time.Since(buildStart).Milliseconds()
 
-	// 2. Populate health before sending.
-	a.snapshotsTotal++
+	// 2. Populate health before sending (counters reflect completed operations only).
 	a.populateHealth(snap)
 	a.latestSnapshot.Store(snap)
 
@@ -215,6 +214,8 @@ func (a *Agent) doSnapshot(ctx context.Context) {
 	resp, err := a.transport.Send(ctx, snap)
 	a.lastSendMs = time.Since(sendStart).Milliseconds()
 
+	// 4. Update counters after send completes.
+	a.snapshotsTotal++
 	if err != nil {
 		a.snapshotsFailed++
 		slog.Error("snapshot send failed", "error", err)
