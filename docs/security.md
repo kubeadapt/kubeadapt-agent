@@ -62,7 +62,7 @@ Every HTTP request the agent sends to the Kubeadapt backend includes an `Authori
 req.Header.Set("Authorization", "Bearer "+a.token)
 ```
 
-The token is the API key set via `KUBEADAPT_API_KEY`. It's required at startup — the agent exits immediately if the key is missing.
+The token is the API key set via `KUBEADAPT_API_KEY`. It's required at startup: the agent exits immediately if the key is missing.
 
 Authentication failures (HTTP 401 or 403) are not retried. The retry transport explicitly skips auth errors:
 

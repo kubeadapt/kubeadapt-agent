@@ -11,7 +11,7 @@ kubeadapt-agent is a single Go binary that you deploy as a Deployment in your Ku
 3. Compresses the snapshot with zstd and streams it to the Kubeadapt backend
 4. Reports its own health so you can monitor collection reliability
 
-The agent never buffers the full payload in memory. It pipes data through a streaming zstd encoder directly to the HTTP request body, keeping memory usage flat regardless of cluster size.
+Cluster state is maintained in memory via Kubernetes informer watch caches, kept current by the Watch API. When sending a snapshot, the agent pipes the data through a streaming zstd encoder directly to the HTTP request body — no secondary buffer is created for the serialized payload.
 
 ## Key Features
 
@@ -22,7 +22,7 @@ The agent never buffers the full payload in memory. It pipes data through a stre
 - **Karpenter support** — collects NodePool resources when Karpenter is present
 - **VPA support** — collects VerticalPodAutoscaler resources when the VPA CRD is installed
 - **Container-aware runtime** — uses `automemlimit` and `automaxprocs` to respect cgroup memory limits and CPU quotas automatically
-- **Resilient state machine** — recovers from transient failures with exponential backoff before resuming collection
+- **State machine** — manages agent lifecycle: Starting, Running, Backoff, Stopped, Exiting
 
 ## Architecture Overview
 
@@ -59,8 +59,7 @@ helm repo update
 helm install kubeadapt-agent kubeadapt/kubeadapt-agent \
   --namespace kubeadapt \
   --create-namespace \
-  --set agent.apiKey=<YOUR_API_KEY> \
-  --set agent.backendURL=<YOUR_BACKEND_URL>
+  --set agent.apiKey=<YOUR_API_KEY>
 ```
 
 The Helm chart handles RBAC, ServiceAccount, and all required permissions. See the [kubeadapt-helm repository](https://github.com/kubeadapt/kubeadapt-helm) for the full values reference and upgrade instructions.

@@ -11,17 +11,17 @@ The definitive source of truth is [`internal/config/config.go`](https://github.c
 | Variable | Description | Default | Required | Validation |
 |---|---|---|---|---|
 | `KUBEADAPT_API_KEY` | API key for authenticating with the Kubeadapt backend. Falls back to `KUBEADAPT_AGENT_TOKEN` if unset. | — | Yes | Must be non-empty |
-| `KUBEADAPT_BACKEND_URL` | Backend API endpoint. Falls back to `KUBEADAPT_BACKEND_API_ENDPOINT` if unset. | `https://api.kubeadapt.io` | No | Must use `https://` unless `KUBEADAPT_ALLOW_INSECURE=true` |
 
 ### Legacy fallback names
 
 `KUBEADAPT_API_KEY` is the canonical name. If it's not set, the agent checks `KUBEADAPT_AGENT_TOKEN` as a fallback. This exists for backward compatibility with older Helm chart versions. Set `KUBEADAPT_API_KEY` in new deployments.
 
-Similarly, `KUBEADAPT_BACKEND_URL` falls back to `KUBEADAPT_BACKEND_API_ENDPOINT`.
 
 ---
 
 ## Intervals
+
+**Note:** Interval values set via Helm or env vars may be overridden at runtime by the Kubeadapt platform based on your subscription tier.
 
 All interval values accept Go duration strings (`60s`, `5m`, `1h30m`) or plain integers treated as seconds (`60` = 60 seconds).
 
@@ -102,7 +102,6 @@ The agent resolves its version using this order:
 The agent calls `config.Validate()` at startup and exits immediately if any rule fails. The rules are:
 
 - `KUBEADAPT_API_KEY` must be non-empty
-- `KUBEADAPT_BACKEND_URL` must be non-empty and start with `https://` unless `KUBEADAPT_ALLOW_INSECURE=true`
 - `KUBEADAPT_SNAPSHOT_INTERVAL` must be >= 10s
 - `KUBEADAPT_METRICS_INTERVAL` must be >= 10s
 - `KUBEADAPT_COMPRESSION_LEVEL` must be 1-4
@@ -145,7 +144,7 @@ KUBEADAPT_GPU_METRICS_INTERVAL=30s
 
 ```env
 KUBEADAPT_API_KEY=ka_test_xxxxxxxxxxxxxxxxxxxx
-KUBEADAPT_BACKEND_URL=http://localhost:8000
+KUBEADAPT_BACKEND_URL=http://localhost:8000 (only needed for local development; set automatically in production by the Helm chart)
 KUBEADAPT_ALLOW_INSECURE=true
 KUBEADAPT_DEBUG_ENDPOINTS=true
 KUBEADAPT_SNAPSHOT_INTERVAL=10s

@@ -272,31 +272,25 @@ The agent can't reach the Kubeadapt backend. Common causes:
 
 - DNS resolution failure for the backend URL
 - Firewall or network policy blocking egress on port 443
-- The backend URL is misconfigured (`KUBEADAPT_BACKEND_URL`)
+- The backend URL is not reachable from the cluster network
 - Temporary network partition
 
 ### Resolution
 
-1. Verify the backend URL is correct:
-
-   ```bash
-   kubectl get configmap kubeadapt-agent-config -n kubeadapt -o yaml | grep BACKEND_URL
-   ```
-
-2. Test connectivity from inside the cluster:
+1. Test connectivity from inside the cluster:
 
    ```bash
    kubectl run -it --rm debug --image=curlimages/curl --restart=Never -n kubeadapt -- \
      curl -v https://api.kubeadapt.io/healthz
    ```
 
-3. Check for network policies that might block egress:
+2. Check for network policies that might block egress:
 
    ```bash
    kubectl get networkpolicies -n kubeadapt
    ```
 
-4. If your cluster requires an HTTP proxy, set it via standard environment variables:
+3. If your cluster requires an HTTP proxy, set it via standard environment variables:
 
    ```yaml
    env:

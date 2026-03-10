@@ -25,13 +25,13 @@ The agent requires a `KUBEADAPT_API_KEY` environment variable to authenticate wi
 
 Full documentation is in the `docs/` directory:
 
-- [Architecture](docs/architecture.md) — how the agent collects and ships metrics
-- [Configuration](docs/configuration.md) — all environment variables and Helm values
-- [Collected Resources](docs/collected-resources.md) — the 22 resource types collected
-- [Health Endpoints](docs/health-endpoints.md) — liveness and readiness probes
-- [Troubleshooting](docs/troubleshooting.md) — common issues and fixes
-- [Development](docs/development.md) — local setup and contribution guide
-- [Security](docs/security.md) — RBAC, network policies, and threat model
+- [Architecture](docs/architecture.md) - how the agent collects and ships metrics
+- [Configuration](docs/configuration.md) - all environment variables and Helm values
+- [Collected Resources](docs/collected-resources.md) - the 22 resource types collected
+- [Health Endpoints](docs/health-endpoints.md) - liveness and readiness probes
+- [Troubleshooting](docs/troubleshooting.md) - common issues and fixes
+- [Development](docs/development.md) - local setup and contribution guide
+- [Security](docs/security.md) - RBAC, network policies, and threat model
 
 ## Development
 

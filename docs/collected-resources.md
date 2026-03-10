@@ -2,6 +2,8 @@
 
 kubeadapt-agent watches your cluster and sends a structured snapshot to the Kubeadapt platform on each collection cycle. This page documents every resource type the agent collects, why it matters for cost optimization, and whether collection is always-on or conditional.
 
+> **Privacy**: kubeadapt-agent collects Kubernetes resource metadata only. Application data, environment variable values, secret contents, and workload payload data are never collected or transmitted.
+
 ## How Collection Works
 
 The agent runs up to 23 collectors concurrently. On startup, it probes the cluster's API groups to detect optional capabilities. Collectors for those capabilities are registered only when the corresponding API group or exporter is present. Every snapshot cycle, all active stores are read in parallel (22 goroutines) and merged into a single `ClusterSnapshot` payload.
@@ -121,7 +123,7 @@ Always collected. HPAs are collected with their target reference, min/max replic
 
 Cost relevance: HPA bounds determine the range of possible resource consumption. Misconfigured HPAs cause over-scaling or under-scaling.
 
-### VerticalPodAutoscalers (VPAs) — conditional
+### VerticalPodAutoscalers (VPAs): conditional
 
 **API group**: `autoscaling.k8s.io/v1/verticalpodautoscalers`
 
@@ -158,6 +160,7 @@ Cost relevance: LoadBalancer service count and configuration contribute to netwo
 **API group**: `networking.k8s.io/v1/ingresses`
 
 Collected with rules, TLS configuration, and ingress class. Ingresses expose services externally and may be backed by cloud load balancers.
+Ingress rules and TLS configuration references are collected as metadata only. TLS certificate contents are not read.
 
 Cost relevance: ingress controller resource usage and associated cloud load balancer costs.
 
@@ -225,7 +228,7 @@ Cost relevance: quota headroom analysis reveals whether teams are under- or over
 
 ## Cloud-Native
 
-### NodePools (Karpenter) — conditional
+### NodePools (Karpenter): conditional
 
 **API group**: `karpenter.sh/v1/nodepools`
 
@@ -241,7 +244,7 @@ Cost relevance: NodePool configuration directly controls which instance types Ka
 
 Metrics are collected separately from resource state and merged into the snapshot before it is sent.
 
-### Node and Pod Metrics — conditional
+### Node and Pod Metrics: conditional
 
 **API group**: `metrics.k8s.io/v1beta1`
 
@@ -251,7 +254,7 @@ When available, the agent collects real-time CPU and memory usage for every node
 
 Cost relevance: actual usage vs. requested resources is the core signal for right-sizing. Without metrics-server, recommendations rely on requests and limits alone.
 
-### GPU Metrics (DCGM) — conditional
+### GPU Metrics (DCGM): conditional
 
 **Condition**: collected only when DCGM exporter pods are detected on GPU nodes, or when static DCGM endpoints are configured via `KUBEADAPT_DCGM_ENDPOINTS`.
 

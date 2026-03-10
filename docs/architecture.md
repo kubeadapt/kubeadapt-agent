@@ -1,6 +1,6 @@
 # Architecture
 
-kubeadapt-agent is a lightweight Go binary that runs inside your Kubernetes cluster as a DaemonSet-adjacent deployment. It watches cluster state through the Kubernetes informer machinery, assembles periodic snapshots of every resource type, and streams them to the KubeAdapt SaaS backend over HTTPS with zstd compression.
+kubeadapt-agent is a lightweight Go binary that runs inside your Kubernetes cluster as a DaemonSet-adjacent deployment. It watches cluster state through the Kubernetes informer machinery, assembles periodic snapshots of every resource type, and streams them to the Kubeadapt SaaS backend over HTTPS with zstd compression.
 
 This document covers the internal design: how components wire together, how the snapshot pipeline works, and how the agent manages its own lifecycle.
 
@@ -8,7 +8,7 @@ This document covers the internal design: how components wire together, how the 
 
 ## High-Level Overview
 
-The agent lives entirely inside the customer cluster. It never opens inbound ports for data (only a health/metrics port for liveness probes). All communication is outbound HTTPS to the KubeAdapt backend.
+The agent lives entirely inside the customer cluster. It never opens inbound ports for data (only a health/metrics port for liveness probes). All communication is outbound HTTPS to the Kubeadapt backend.
 
 ```mermaid
 graph LR
@@ -22,14 +22,14 @@ graph LR
         A -- GPU metrics poll --> GPU
     end
 
-    subgraph KubeAdapt SaaS
+    subgraph Kubeadapt SaaS
         B[Backend API]
     end
 
     A -- HTTPS + zstd\nClusterSnapshot --> B
 ```
 
-The backend is a black box from the agent's perspective. The agent sends a `ClusterSnapshot` JSON payload and receives a `SnapshotResponse` that may carry a state directive (e.g., back off, stop, exit). The agent never pulls configuration from the backend — all config comes from environment variables at startup.
+The backend is a black box from the agent's perspective. The agent sends a `ClusterSnapshot` JSON payload and receives a `SnapshotResponse` that may carry a state directive (e.g., back off, stop, exit). The agent never pulls configuration from the backend. All config comes from environment variables at startup.
 
 ---
 
@@ -59,13 +59,13 @@ graph TD
 
 ### Component responsibilities
 
-**Config** (`internal/config`) — loads all settings from environment variables at startup. No dynamic reload. Validates required fields (API key, backend URL, cluster name) and exits immediately on invalid config.
+**Config** (`internal/config`): loads all settings from environment variables at startup. No dynamic reload. Validates required fields (API key, backend URL, cluster name) and exits immediately on invalid config.
 
 **Kubernetes Clients** — three clients built from the in-cluster kubeconfig: `kubernetes.Clientset` for core resources, `dynamic.Interface` for CRDs (VPA, NodePool), and `metricsv1beta1.Interface` for the metrics-server API.
 
-**Discovery** (`internal/discovery`) — probes the cluster once at startup to detect optional capabilities: metrics-server, VPA, Karpenter NodePools, DCGM exporter, and cloud provider. The result gates which collectors get registered.
+**Discovery** (`internal/discovery`): probes the cluster once at startup to detect optional capabilities: metrics-server, VPA, Karpenter NodePools, DCGM exporter, and cloud provider. The result gates which collectors get registered.
 
-**Collector Registry** (`internal/collector`) — holds all registered collectors and provides `StartAll`, `WaitForSync`, and `StopAll` lifecycle methods. Each collector implements the `Collector` interface:
+**Collector Registry** (`internal/collector`): holds all registered collectors and provides `StartAll`, `WaitForSync`, and `StopAll` lifecycle methods. Each collector implements the `Collector` interface:
 
 ```go
 type Collector interface {
@@ -76,19 +76,19 @@ type Collector interface {
 }
 ```
 
-**Store + MetricsStore** (`internal/store`) — thread-safe typed maps. Informer-based collectors write into `Store` on every watch event. The metrics-server collector writes into `MetricsStore`. The snapshot builder reads both stores concurrently.
+**Store + MetricsStore** (`internal/store`): thread-safe typed maps. Informer-based collectors write into `Store` on every watch event. The metrics-server collector writes into `MetricsStore`. The snapshot builder reads both stores concurrently.
 
-**SnapshotBuilder** (`internal/snapshot`) — assembles a `ClusterSnapshot` from the stores on each tick. See the [Snapshot Build Pipeline](#snapshot-build-pipeline) section for the full 9-step sequence.
+**SnapshotBuilder** (`internal/snapshot`): assembles a `ClusterSnapshot` from the stores on each tick. See the [Snapshot Build Pipeline](#snapshot-build-pipeline) section for the full 9-step sequence.
 
-**Enrichment Pipeline** (`internal/enrichment`) — runs three enrichers in sequence after ownership resolution: `AggregationEnricher` (rolls up container metrics to pod/workload level), `TargetsEnricher` (attaches HPA/VPA targets to workloads), `MountsEnricher` (links PVCs to pods).
+**Enrichment Pipeline** (`internal/enrichment`): runs three enrichers in sequence after ownership resolution: `AggregationEnricher` (rolls up container metrics to pod/workload level), `TargetsEnricher` (attaches HPA/VPA targets to workloads), `MountsEnricher` (links PVCs to pods).
 
-**Transport Client** (`internal/transport`) — serializes the snapshot to JSON and streams it through an `io.Pipe` with zstd compression. The full payload is never buffered in memory. Retries with exponential backoff on transient errors.
+**Transport Client** (`internal/transport`): Serializes the snapshot to JSON and pipes it through a streaming zstd encoder directly into the HTTP request body. The informer store holds current cluster state in memory; no second in-memory buffer is created for transmission. Retries with exponential backoff on transient errors.
 
-**StateMachine** (`internal/agent`) — tracks the agent's lifecycle state and transitions it based on HTTP response codes from the backend. See the [State Machine](#state-machine) section.
+**StateMachine** (`internal/agent`): tracks the agent's lifecycle state and transitions it based on HTTP response codes from the backend. See the [State Machine](#state-machine) section.
 
-**Health Server** (`internal/health`) — HTTP server on port 8080 (configurable). Exposes `/healthz` (liveness), `/readyz` (readiness), `/metrics` (Prometheus), and optionally `/debug/pprof` when `KUBEADAPT_DEBUG_ENDPOINTS=true`.
+**Health Server** (`internal/health`): HTTP server on port 8080 (configurable). Exposes `/healthz` (liveness), `/readyz` (readiness), `/metrics` (Prometheus), and optionally `/debug/pprof` when `KUBEADAPT_DEBUG_ENDPOINTS=true`.
 
-**MemoryPressureMonitor** — polls runtime memory stats every 30 seconds. Triggers `runtime.GC()` when heap usage exceeds 80% of the container memory limit. Works in tandem with `automemlimit` (see [Runtime Tuning](#runtime-tuning)).
+**MemoryPressureMonitor**: polls runtime memory stats every 30 seconds. Triggers `runtime.GC()` when heap usage exceeds 80% of the container memory limit. Works in tandem with `automemlimit` (see [Runtime Tuning](#runtime-tuning)).
 
 ---
 
@@ -204,15 +204,15 @@ stateDiagram-v2
 
 ### State descriptions
 
-**Starting** — initial state. Collectors are starting and syncing. No snapshots are sent. The agent is not yet marked ready.
+**Starting**: initial state. Collectors are starting and syncing. No snapshots are sent. The agent is not yet marked ready.
 
-**Running** — normal operation. The agent sends a snapshot on every tick. HTTP 200 from the backend keeps the state as Running.
+**Running**: normal operation. The agent sends a snapshot on every tick. HTTP 200 from the backend keeps the state as Running.
 
-**Backoff** — the backend asked the agent to slow down. HTTP 402 means quota exceeded; HTTP 429 means rate limited. The agent skips snapshot sends until the backoff timer expires. The `Retry-After` response header sets the backoff duration (default: 5 minutes for 402, 30 seconds for 429).
+**Backoff**: the backend asked the agent to slow down. HTTP 402 means quota exceeded; HTTP 429 means rate limited. The agent skips snapshot sends until the backoff timer expires. The `Retry-After` response header sets the backoff duration (default: 5 minutes for 402, 30 seconds for 429).
 
-**Stopped** — the agent's credentials are invalid (HTTP 401) or forbidden (HTTP 403). The main loop exits cleanly. The pod will restart (depending on the restart policy) and re-authenticate on the next run.
+**Stopped**: the agent's credentials are invalid (HTTP 401) or forbidden (HTTP 403). The main loop exits cleanly. The pod will restart (depending on the restart policy) and re-authenticate on the next run.
 
-**Exiting** — the backend returned HTTP 410, signaling that this agent version is deprecated and should not continue. The main loop exits. The pod should be upgraded via Helm.
+**Exiting**: the backend returned HTTP 410, signaling that this agent version is deprecated and should not continue. The main loop exits. The pod should be upgraded via Helm.
 
 ### HTTP 5xx handling
 
@@ -243,8 +243,8 @@ Server errors (5xx) don't change state. The transport layer retries with exponen
 | PriorityClassCollector | informer | no |
 | LimitRangeCollector | informer | no |
 | ResourceQuotaCollector | informer | no |
-| VPACollector | informer | yes — VPA CRD present |
-| NodePoolCollector | informer | yes — Karpenter CRD present |
+| VPACollector | informer | yes: VPA CRD present |
+| NodePoolCollector | informer | yes: Karpenter CRD present |
 | MetricsCollector | poll | yes — metrics-server present |
 | GPUMetricsCollector | poll | yes — DCGM exporter detected |
 

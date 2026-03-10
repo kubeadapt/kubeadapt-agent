@@ -71,8 +71,7 @@ All other variables are optional with sensible defaults. Key ones for local dev:
 
 | Variable | Default | Description |
 |---|---|---|
-| `KUBEADAPT_BACKEND_URL` | `https://api.kubeadapt.io` | Backend endpoint |
-| `KUBEADAPT_CLUSTER_NAME` | (empty) | Human-readable cluster name |
+| `KUBEADAPT_BACKEND_URL` | `https://api.kubeadapt.io` | Backend endpoint (set automatically by Helm in production; override for local dev only) |
 | `KUBEADAPT_SNAPSHOT_INTERVAL` | `60s` | How often to snapshot cluster state |
 | `KUBEADAPT_METRICS_INTERVAL` | `60s` | How often to collect metrics |
 | `KUBEADAPT_HEALTH_PORT` | `8080` | Health check HTTP port |

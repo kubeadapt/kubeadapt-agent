@@ -14,13 +14,13 @@ env:
     value: "8080"
 ```
 
-The Helm chart exposes this port as a named container port (`health`) and wires it to the liveness and readiness probes automatically.
+The Helm chart exposes this port as a named container port (`health`).
 
 ---
 
 ## Endpoints
 
-### `GET /healthz` — Liveness
+### `GET /healthz`: Liveness
 
 Always returns `200 OK`. Kubernetes uses this to decide whether to restart the container. The agent never returns a non-200 here; if the process is alive, it's healthy.
 
@@ -35,11 +35,11 @@ Content-Type: application/json
 
 ---
 
-### `GET /readyz` — Readiness
+### `GET /readyz`: Readiness
 
 Returns `200 OK` when the agent has completed its first full sync with the Kubernetes API server. Returns `503 Service Unavailable` before that sync finishes.
 
-Kubernetes uses this to decide whether to send traffic to the pod. During startup, the agent needs time to list all resources from the API server before it can produce a valid snapshot. The readiness probe prevents the pod from being considered ready until that work is done.
+During startup, the agent needs time to list all resources from the API server before it can produce a valid snapshot. The readiness probe signals that initial sync is complete and valid snapshots are being produced.
 
 **Response — ready**
 
@@ -61,7 +61,7 @@ Content-Type: application/json
 
 ---
 
-### `GET /metrics` — Prometheus Metrics
+### `GET /metrics`: Prometheus Metrics
 
 Exposes the agent's internal Prometheus metrics in the standard text exposition format. Scraped by your cluster's Prometheus instance.
 
@@ -80,7 +80,7 @@ The Helm chart creates a `ServiceMonitor` (if Prometheus Operator is installed) 
 
 ---
 
-### `GET /debug/pprof/*` — Go pprof Profiles
+### `GET /debug/pprof/*`: Go pprof Profiles
 
 **Only available when `KUBEADAPT_DEBUG_ENDPOINTS=true`.**
 
@@ -104,7 +104,7 @@ go tool pprof http://localhost:8080/debug/pprof/profile
 
 ---
 
-### `GET /debug/snapshot` — Latest Snapshot
+### `GET /debug/snapshot`: Latest Snapshot
 
 **Only available when `KUBEADAPT_DEBUG_ENDPOINTS=true`.**
 
@@ -129,7 +129,7 @@ Returns `204` if the agent hasn't completed its first collection cycle yet.
 
 ---
 
-### `GET /debug/store` — Store Item Counts
+### `GET /debug/store`: Store Item Counts
 
 **Only available when `KUBEADAPT_DEBUG_ENDPOINTS=true`.**
 
@@ -153,7 +153,7 @@ Content-Type: application/json
 
 ## Kubernetes Probe Configuration
 
-The Helm chart configures these probes by default. If you're deploying manually, use:
+The Helm chart does not configure probes by default. For manual deployments, use:
 
 ```yaml
 livenessProbe:
