@@ -1,8 +1,15 @@
-site_name: Service Documentation
-site_description: Auto-generated documentation site
+site_name: kubeadapt-agent
+site_description: Lightweight Kubernetes resource metrics collector agent
 
 nav:
   - Home: index.md
+  - Architecture: architecture.md
+  - Configuration: configuration.md
+  - Collected Resources: collected-resources.md
+  - Health Endpoints: health-endpoints.md
+  - Troubleshooting: troubleshooting.md
+  - Development: development.md
+  - Security: security.md
 
 plugins:
   - techdocs-core

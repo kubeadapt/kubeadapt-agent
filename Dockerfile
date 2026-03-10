@@ -39,7 +39,7 @@ COPY --from=builder /app/kubeadapt-agent .
 USER nonroot:nonroot
 
 # Expose health port
-EXPOSE 8086
+EXPOSE 8080
 
 # Run the application
 ENTRYPOINT ["/kubeadapt-agent"]
