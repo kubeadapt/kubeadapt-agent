@@ -2,7 +2,7 @@
 
 All configuration is done through environment variables. The agent reads them at startup and fails fast if required values are missing or invalid.
 
-The definitive source of truth is [`internal/config/config.go`](../internal/config/config.go). This document is mechanically derived from that file.
+The definitive source of truth is [`internal/config/config.go`](https://github.com/kubeadapt/kubeadapt-agent/blob/main/internal/config/config.go). This document is mechanically derived from that file.
 
 ---
 

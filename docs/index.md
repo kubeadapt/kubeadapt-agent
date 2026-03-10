@@ -35,7 +35,7 @@ Your Kubernetes Cluster
 │  │  Capability Detection                        │   │
 │  │  (metrics-server, VPA, Karpenter, DCGM)     │   │
 │  │                                              │   │
-│  │  22 Collectors (concurrent)                  │   │
+│  │  up to 23 Collectors (concurrent)               │   │
 │  │  → Ownership Enrichment                      │   │
 │  │  → zstd Streaming Transport                  │   │
 │  └──────────────────────┬──────────────────────┘   │

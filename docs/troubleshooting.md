@@ -64,7 +64,7 @@ The backend rejected the API key. This happens when:
 3. If the key is wrong, update the secret and restart the agent:
 
    ```bash
-   kubectl rollout restart daemonset/kubeadapt-agent -n kubeadapt
+   kubectl rollout restart deployment/kubeadapt-agent -n kubeadapt
    ```
 
 4. Watch logs to confirm the agent transitions to `running`:
@@ -187,7 +187,7 @@ The backend has rejected this agent version as too old. HTTP 410 is a permanent 
 3. After upgrading, confirm the agent reaches `running` state:
 
    ```bash
-   kubectl rollout status daemonset/kubeadapt-agent -n kubeadapt
+   kubectl rollout status deployment/kubeadapt-agent -n kubeadapt
    kubectl logs -n kubeadapt -l app=kubeadapt-agent -f
    ```
 
@@ -241,7 +241,7 @@ The agent deliberately continues with partial data rather than failing completel
 3. Restart the agent to trigger a fresh sync attempt:
 
    ```bash
-   kubectl rollout restart daemonset/kubeadapt-agent -n kubeadapt
+   kubectl rollout restart deployment/kubeadapt-agent -n kubeadapt
    ```
 
 4. After restart, watch for the success message:
