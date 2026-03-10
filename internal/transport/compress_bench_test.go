@@ -16,7 +16,6 @@ func benchSnapshot(numNodes, numPods int) *model.ClusterSnapshot {
 	snap := &model.ClusterSnapshot{
 		SnapshotID:   "bench-snapshot-id",
 		ClusterID:    "bench-cluster",
-		ClusterName:  "bench",
 		Timestamp:    1700000000000,
 		AgentVersion: "bench-0.0.1",
 	}

@@ -344,7 +344,6 @@ func TestE2E_Transport(t *testing.T) {
 
 			// Verify the snapshot sent to backend has the expected fields
 			assert.NotEmpty(t, latest.SnapshotID, "snapshot_id should be set")
-			assert.NotEmpty(t, latest.ClusterName, "cluster_name should be set")
 			assert.Greater(t, latest.Timestamp, int64(0), "timestamp should be set")
 			assert.Greater(t, len(latest.Nodes), 0, "sent snapshot should have nodes")
 			assert.Greater(t, len(latest.Pods), 0, "sent snapshot should have pods")

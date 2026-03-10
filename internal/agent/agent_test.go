@@ -72,7 +72,6 @@ func newTestBackend(t *testing.T, requestCount *atomic.Int32, statusCode int) *h
 func newTestConfig(backendURL string) *config.Config {
 	return &config.Config{
 		APIKey:              "test-key",
-		ClusterName:         "test",
 		BackendURL:          backendURL,
 		SnapshotInterval:    50 * time.Millisecond, // fast for tests
 		InformerSyncTimeout: 5 * time.Second,

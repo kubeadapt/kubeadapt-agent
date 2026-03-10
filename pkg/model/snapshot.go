@@ -5,7 +5,6 @@ type ClusterSnapshot struct {
 	// Identity
 	SnapshotID   string `json:"snapshot_id"`
 	ClusterID    string `json:"cluster_id"`
-	ClusterName  string `json:"cluster_name"`
 	Timestamp    int64  `json:"timestamp"`
 	AgentVersion string `json:"agent_version"`
 

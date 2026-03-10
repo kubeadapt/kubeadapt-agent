@@ -11,7 +11,6 @@ func clearEnv(t *testing.T) {
 	t.Helper()
 	envVars := []string{
 		"KUBEADAPT_API_KEY",
-		"KUBEADAPT_CLUSTER_NAME",
 		"KUBEADAPT_BACKEND_URL",
 		"KUBEADAPT_SNAPSHOT_INTERVAL",
 		"KUBEADAPT_METRICS_INTERVAL",
@@ -90,7 +89,6 @@ func TestLoad_Defaults(t *testing.T) {
 func TestLoad_AllEnvVars(t *testing.T) {
 	clearEnv(t)
 	t.Setenv("KUBEADAPT_API_KEY", "my-api-key")
-	t.Setenv("KUBEADAPT_CLUSTER_NAME", "prod-cluster")
 	t.Setenv("KUBEADAPT_BACKEND_URL", "https://custom.example.com")
 	t.Setenv("KUBEADAPT_SNAPSHOT_INTERVAL", "120s")
 	t.Setenv("KUBEADAPT_METRICS_INTERVAL", "30s")
@@ -105,9 +103,6 @@ func TestLoad_AllEnvVars(t *testing.T) {
 
 	if cfg.APIKey != "my-api-key" {
 		t.Errorf("APIKey = %q, want %q", cfg.APIKey, "my-api-key")
-	}
-	if cfg.ClusterName != "prod-cluster" {
-		t.Errorf("ClusterName = %q, want %q", cfg.ClusterName, "prod-cluster")
 	}
 	if cfg.BackendURL != "https://custom.example.com" {
 		t.Errorf("BackendURL = %q, want %q", cfg.BackendURL, "https://custom.example.com")

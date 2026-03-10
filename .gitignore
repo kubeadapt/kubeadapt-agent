@@ -3,4 +3,5 @@ bin
 
 test-report.html
 .env
+.sisyphus/
 tests/e2e/e2e-logs/

@@ -10,7 +10,6 @@ import (
 // Config holds all agent configuration values.
 type Config struct {
 	APIKey               string
-	ClusterName          string
 	BackendURL           string
 	SnapshotInterval     time.Duration
 	MetricsInterval      time.Duration
@@ -31,8 +30,8 @@ type Config struct {
 	NodeName        string // NODE_NAME
 
 	// Security
-	AllowInsecure    bool // KUBEADAPT_ALLOW_INSECURE, default: false — allows http:// BackendURL
-	DebugEndpoints   bool // KUBEADAPT_DEBUG_ENDPOINTS, default: false — enables pprof/debug on health port
+	AllowInsecure  bool // KUBEADAPT_ALLOW_INSECURE, default: false — allows http:// BackendURL
+	DebugEndpoints bool // KUBEADAPT_DEBUG_ENDPOINTS, default: false — enables pprof/debug on health port
 
 	// GPU monitoring
 	GPUMetricsEnabled     bool          // KUBEADAPT_GPU_METRICS_ENABLED, default: true
@@ -47,7 +46,6 @@ type Config struct {
 func Load() Config {
 	cfg := Config{
 		APIKey:               envOrFallback("KUBEADAPT_API_KEY", "KUBEADAPT_AGENT_TOKEN"),
-		ClusterName:          os.Getenv("KUBEADAPT_CLUSTER_NAME"),
 		BackendURL:           envOrFallbackOrDefault("KUBEADAPT_BACKEND_URL", "KUBEADAPT_BACKEND_API_ENDPOINT", "https://api.kubeadapt.io"),
 		SnapshotInterval:     parseDuration("KUBEADAPT_SNAPSHOT_INTERVAL", 60*time.Second),
 		MetricsInterval:      parseDuration("KUBEADAPT_METRICS_INTERVAL", 60*time.Second),
@@ -65,7 +63,6 @@ func Load() Config {
 	cfg.PodName = os.Getenv("POD_NAME")
 	cfg.PodNamespace = os.Getenv("POD_NAMESPACE")
 	cfg.NodeName = os.Getenv("NODE_NAME")
-
 
 	cfg.AllowInsecure = parseBool("KUBEADAPT_ALLOW_INSECURE", false)
 	cfg.DebugEndpoints = parseBool("KUBEADAPT_DEBUG_ENDPOINTS", false)

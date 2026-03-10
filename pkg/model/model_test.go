@@ -72,7 +72,6 @@ func TestClusterSnapshot_RoundTrip(t *testing.T) {
 	orig := ClusterSnapshot{
 		SnapshotID:        "snap-001",
 		ClusterID:         "cls-abc",
-		ClusterName:       "prod-us-east",
 		Timestamp:         1700000000000,
 		AgentVersion:      "2.0.0",
 		Provider:          "aws",

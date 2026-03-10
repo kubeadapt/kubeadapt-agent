@@ -98,7 +98,6 @@ func (b *SnapshotBuilder) Build(ctx context.Context) *model.ClusterSnapshot {
 
 	// Step 7: Set identity fields.
 	snap.SnapshotID = uuid.New().String()
-	snap.ClusterName = b.config.ClusterName
 	snap.Timestamp = time.Now().UnixMilli()
 	snap.AgentVersion = b.config.AgentVersion
 

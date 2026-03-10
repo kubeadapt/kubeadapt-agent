@@ -24,7 +24,6 @@ func testSnapshot() *model.ClusterSnapshot {
 	return &model.ClusterSnapshot{
 		SnapshotID:        "snap-001",
 		ClusterID:         "cluster-test",
-		ClusterName:       "test-cluster",
 		Timestamp:         time.Now().Unix(),
 		AgentVersion:      "v2.0.0-test",
 		Provider:          "aws",
@@ -112,9 +111,6 @@ func TestClient_Send_StreamingCompression(t *testing.T) {
 	}
 	if got.SnapshotID != snapshot.SnapshotID {
 		t.Fatalf("expected SnapshotID %q, got %q", snapshot.SnapshotID, got.SnapshotID)
-	}
-	if got.ClusterName != snapshot.ClusterName {
-		t.Fatalf("expected ClusterName %q, got %q", snapshot.ClusterName, got.ClusterName)
 	}
 }
 
@@ -264,7 +260,6 @@ func TestClient_Send_ContractTest(t *testing.T) {
 	original := &model.ClusterSnapshot{
 		SnapshotID:        "snap-contract",
 		ClusterID:         "cluster-contract",
-		ClusterName:       "contract-test",
 		Timestamp:         1700000000,
 		AgentVersion:      "v2.0.0",
 		Provider:          "gcp",
