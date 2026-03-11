@@ -4,6 +4,13 @@ on:
   push:
     branches: [develop]
     tags: ['v*']
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - 'mkdocs.yml'
+      - 'site/**'
 
 permissions:
   id-token: write
