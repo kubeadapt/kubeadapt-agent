@@ -51,7 +51,7 @@ All interval values accept Go duration strings (`60s`, `5m`, `1h30m`) or plain i
 | Variable | Description | Default | Required | Validation |
 |---|---|---|---|---|
 | `KUBEADAPT_HEALTH_PORT` | HTTP port for the `/healthz` and `/readyz` endpoints. | `8080` | No | Must be 1-65535 |
-| `KUBEADAPT_ALLOW_INSECURE` | Allow `http://` (non-TLS) backend URLs. Set to `true` only for local development. | `false` | No | Boolean (`true`/`false`, `1`/`0`) |
+| `KUBEADAPT_DEBUG_ENDPOINTS` | Enable pprof and debug endpoints on the health port. Never enable in production. | `false` | No | Boolean (`true`/`false`, `1`/`0`) |
 | `KUBEADAPT_DEBUG_ENDPOINTS` | Enable pprof and debug endpoints on the health port. Never enable in production. | `false` | No | Boolean (`true`/`false`, `1`/`0`) |
 
 ---
@@ -63,7 +63,7 @@ All interval values accept Go duration strings (`60s`, `5m`, `1h30m`) or plain i
 | `KUBEADAPT_GPU_METRICS_ENABLED` | Enable GPU metrics collection via DCGM exporter. Disable if your cluster has no GPUs. | `true` | No | Boolean (`true`/`false`, `1`/`0`) |
 | `KUBEADAPT_DCGM_PORT` | Port on which DCGM exporter pods expose metrics. | `9400` | No | None |
 | `KUBEADAPT_DCGM_NAMESPACE` | Kubernetes namespace to search for DCGM exporter pods. Empty string means auto-detect across all namespaces. | `""` (auto-detect) | No | None |
-| `KUBEADAPT_DCGM_ENDPOINTS` | Comma-separated list of DCGM exporter endpoints (e.g., `10.0.0.1:9400,10.0.0.2:9400`). Overrides auto-discovery. Intended for local development only. | `""` (auto-discover) | No | None |
+| `KUBEADAPT_DCGM_ENDPOINTS` | Comma-separated list of DCGM exporter endpoints (e.g., `10.0.0.1:9400,10.0.0.2:9400`). Overrides auto-discovery. | `""` (auto-discover) | No | None |
 
 ---
 
@@ -140,17 +140,6 @@ KUBEADAPT_DCGM_NAMESPACE=gpu-operator
 KUBEADAPT_GPU_METRICS_INTERVAL=30s
 ```
 
-### Local development
-
-```env
-KUBEADAPT_API_KEY=ka_test_xxxxxxxxxxxxxxxxxxxx
-KUBEADAPT_BACKEND_URL=http://localhost:8000 (only needed for local development; set automatically in production by the Helm chart)
-KUBEADAPT_ALLOW_INSECURE=true
-KUBEADAPT_DEBUG_ENDPOINTS=true
-KUBEADAPT_SNAPSHOT_INTERVAL=10s
-KUBEADAPT_METRICS_INTERVAL=10s
-KUBEADAPT_GPU_METRICS_ENABLED=false
-```
 
 ---
 

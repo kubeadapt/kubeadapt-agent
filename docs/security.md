@@ -74,23 +74,13 @@ Authentication failures (HTTP 401 or 403) are not retried. The retry transport e
 
 ## TLS Enforcement
 
-The backend URL must use `https://` by default. The config validator (`internal/config/validate.go`) rejects any non-HTTPS URL at startup:
+All communication with the backend uses HTTPS. The config validator rejects any non-HTTPS backend URL at startup:
 
 ```go
 if !c.AllowInsecure && !strings.HasPrefix(c.BackendURL, "https://") {
     return fmt.Errorf("config: KUBEADAPT_BACKEND_URL must use https://...")
 }
 ```
-
-The default backend URL is `https://api.kubeadapt.io`.
-
-To allow an HTTP URL (local development only), set:
-
-```
-KUBEADAPT_ALLOW_INSECURE=true
-```
-
-This flag should never be set in production.
 
 ---
 

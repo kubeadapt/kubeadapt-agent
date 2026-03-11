@@ -67,16 +67,14 @@ The only required variable is:
 |---|---|
 | `KUBEADAPT_API_KEY` | API key for authenticating with the Kubeadapt backend |
 
-All other variables are optional with sensible defaults. Key ones for local dev:
+All other variables are optional with sensible defaults. Key ones:
 
 | Variable | Default | Description |
 |---|---|---|
-| `KUBEADAPT_BACKEND_URL` | `https://api.kubeadapt.io` | Backend endpoint (set automatically by Helm in production; override for local dev only) |
 | `KUBEADAPT_SNAPSHOT_INTERVAL` | `60s` | How often to snapshot cluster state |
 | `KUBEADAPT_METRICS_INTERVAL` | `60s` | How often to collect metrics |
 | `KUBEADAPT_HEALTH_PORT` | `8080` | Health check HTTP port |
 | `KUBEADAPT_DEBUG_ENDPOINTS` | `false` | Enable pprof on health port |
-| `KUBEADAPT_ALLOW_INSECURE` | `false` | Allow HTTP (non-TLS) backend |
 
 Make sure your kubeconfig points to the target cluster, then run:
 
@@ -119,7 +117,7 @@ make bench
 
 ### E2E Tests
 
-E2E tests spin up a Kind cluster, deploy the agent and an ingestion stub, then verify end-to-end behavior.
+E2E tests spin up a Kind cluster, deploy the agent and a backend stub, then verify end-to-end behavior.
 
 ```bash
 make test-e2e
@@ -127,7 +125,7 @@ make test-e2e
 
 This runs two steps:
 
-1. `make test-e2e-build` — builds `localhost/kubeadapt-agent:e2e-test` and `localhost/ingestion-stub:e2e-test`
+1. `make test-e2e-build` — builds the agent and backend stub Docker images for testing
 2. `make test-e2e-run` — runs `go test -v -timeout 30m ./tests/e2e/...`
 
 You need Docker and a working `kubectl` in `PATH`. The test framework provisions its own Kind cluster.

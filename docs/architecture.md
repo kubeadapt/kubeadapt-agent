@@ -1,6 +1,6 @@
 # Architecture
 
-kubeadapt-agent is a lightweight Go binary that runs inside your Kubernetes cluster as a DaemonSet-adjacent deployment. It watches cluster state through the Kubernetes informer machinery, assembles periodic snapshots of every resource type, and streams them to the Kubeadapt SaaS backend over HTTPS with zstd compression.
+kubeadapt-agent is a lightweight Go binary that runs inside your Kubernetes cluster as a single Deployment. It watches cluster state through the Kubernetes informer machinery, assembles periodic snapshots of every resource type, and streams them to the Kubeadapt backend over HTTPS with zstd compression.
 
 This document covers the internal design: how components wire together, how the snapshot pipeline works, and how the agent manages its own lifecycle.
 
@@ -22,7 +22,7 @@ graph LR
         A -- GPU metrics poll --> GPU
     end
 
-    subgraph Kubeadapt SaaS
+    subgraph Kubeadapt Backend
         B[Backend API]
     end
 
@@ -59,9 +59,9 @@ graph TD
 
 ### Component responsibilities
 
-**Config** (`internal/config`): loads all settings from environment variables at startup. No dynamic reload. Validates required fields (API key, backend URL, cluster name) and exits immediately on invalid config.
+**Config** (`internal/config`): loads all settings from environment variables at startup. No dynamic reload. Validates required fields and configuration constraints at startup, then exits immediately on any invalid value.
 
-**Kubernetes Clients** — three clients built from the in-cluster kubeconfig: `kubernetes.Clientset` for core resources, `dynamic.Interface` for CRDs (VPA, NodePool), and `metricsv1beta1.Interface` for the metrics-server API.
+**Kubernetes Clients**: three clients built from the in-cluster kubeconfig: `kubernetes.Clientset` for core resources, `dynamic.Interface` for CRDs (VPA, NodePool), and `metricsv1beta1.Interface` for the metrics-server API.
 
 **Discovery** (`internal/discovery`): probes the cluster once at startup to detect optional capabilities: metrics-server, VPA, Karpenter NodePools, DCGM exporter, and cloud provider. The result gates which collectors get registered.
 
@@ -245,8 +245,8 @@ Server errors (5xx) don't change state. The transport layer retries with exponen
 | ResourceQuotaCollector | informer | no |
 | VPACollector | informer | yes: VPA CRD present |
 | NodePoolCollector | informer | yes: Karpenter CRD present |
-| MetricsCollector | poll | yes — metrics-server present |
-| GPUMetricsCollector | poll | yes — DCGM exporter detected |
+| MetricsCollector | poll | yes: metrics-server present |
+| GPUMetricsCollector | poll | yes: DCGM exporter detected |
 
 The 19 always-on collectors cover the full Kubernetes resource model. The 4 conditional collectors activate only when the corresponding capability is detected at startup.
 

@@ -374,7 +374,7 @@ Always returns `{"status": "ok"}` as long as the process is running.
 
 Debug endpoints require `KUBEADAPT_DEBUG_ENDPOINTS=true`. They're disabled by default.
 
-**Store item counts** -- shows how many objects each informer has cached:
+**Store item counts**: shows how many objects each informer has cached:
 
 ```bash
 kubectl exec -n kubeadapt <pod-name> -- wget -qO- http://localhost:8080/debug/store
@@ -393,7 +393,7 @@ Example output:
 
 Zero counts for a resource type indicate that informer didn't sync. This is the fastest way to diagnose partial data issues.
 
-**Latest snapshot** -- returns the full cluster snapshot the agent last built:
+**Latest snapshot**: returns the full cluster snapshot the agent last built:
 
 ```bash
 kubectl exec -n kubeadapt <pod-name> -- wget -qO- http://localhost:8080/debug/snapshot
@@ -401,11 +401,11 @@ kubectl exec -n kubeadapt <pod-name> -- wget -qO- http://localhost:8080/debug/sn
 
 The `health` field in the snapshot contains:
 
-- `state` and `state_reason` -- current agent state
-- `error_codes` -- active error codes (e.g., `BACKEND_UNREACHABLE`, `INFORMER_SYNC_TIMEOUT`)
-- `snapshots_sent_total`, `snapshots_failed_total` -- cumulative counters
-- `informers_synced`, `informers_healthy`, `informers_total` -- informer health
-- `uptime_seconds` -- how long the agent has been running
+- `state` and `state_reason`: current agent state
+- `error_codes`: active error codes (e.g., `BACKEND_UNREACHABLE`, `INFORMER_SYNC_TIMEOUT`)
+- `snapshots_sent_total`, `snapshots_failed_total`: cumulative counters
+- `informers_synced`, `informers_healthy`, `informers_total`: informer health
+- `uptime_seconds`: how long the agent has been running
 
 ### Prometheus metrics
 

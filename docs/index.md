@@ -1,12 +1,14 @@
 # kubeadapt-agent
 
+> This documentation is public so you can see exactly what runs inside your cluster. It is maintained internally as part of our development process. While we don't expect external contributions, we welcome any feedback or pull requests.
+
 **Lightweight Kubernetes resource metrics collector agent** — runs inside your cluster, snapshots workload state, and streams it to the Kubeadapt platform for cost analysis and right-sizing recommendations.
 
 ## What It Does
 
 kubeadapt-agent is a single Go binary that you deploy as a Deployment in your Kubernetes cluster. Every configurable interval it:
 
-1. Collects resource state across 22 Kubernetes resource types concurrently
+1. Collects resource state across Kubernetes workloads, networking, storage, and autoscaling resources concurrently
 2. Enriches workload ownership (resolving Pods back to their top-level controllers)
 3. Compresses the snapshot with zstd and streams it to the Kubeadapt backend
 4. Reports its own health so you can monitor collection reliability
@@ -15,7 +17,7 @@ Cluster state is maintained in memory via Kubernetes informer watch caches, kept
 
 ## Key Features
 
-- **22 resource types** collected in parallel: Nodes, Pods, Deployments, StatefulSets, DaemonSets, Jobs, CronJobs, HPAs, VPAs, PDBs, Services, Ingresses, PVs, PVCs, StorageClasses, PriorityClasses, LimitRanges, ResourceQuotas, Namespaces, custom workloads, and more
+- Collects Nodes, Pods, Deployments, StatefulSets, DaemonSets, Jobs, CronJobs, HPAs, VPAs, PDBs, Services, Ingresses, PVs, PVCs, StorageClasses, PriorityClasses, LimitRanges, ResourceQuotas, Namespaces, and more — all in parallel
 - **Metrics-server support** — when detected, collects live CPU and memory usage per Pod and Node
 - **GPU monitoring** — integrates with DCGM Exporter to collect GPU utilization and memory metrics for NVIDIA workloads
 - **Multi-cloud aware** — detects your cloud provider (AWS, GCP, Azure) and region automatically at startup

@@ -6,7 +6,7 @@ kubeadapt-agent watches your cluster and sends a structured snapshot to the Kube
 
 ## How Collection Works
 
-The agent runs up to 23 collectors concurrently. On startup, it probes the cluster's API groups to detect optional capabilities. Collectors for those capabilities are registered only when the corresponding API group or exporter is present. Every snapshot cycle, all active stores are read in parallel (22 goroutines) and merged into a single `ClusterSnapshot` payload.
+The agent runs multiple collectors concurrently. On startup, it probes the cluster's API groups to detect optional capabilities. Collectors for those capabilities are registered only when the corresponding API group or exporter is present. Every snapshot cycle, all active stores are read in parallel and merged into a single `ClusterSnapshot` payload.
 
 ## Conditional Activation
 

@@ -4,10 +4,10 @@
 
 Lightweight Kubernetes resource metrics collector agent for the [Kubeadapt](https://kubeadapt.io) platform.
 
-- Collects 22 Kubernetes resource types using watch-based informers (Pods, Nodes, Deployments, StatefulSets, and more)
+- Collects Kubernetes resource state across workloads, networking, storage, and autoscaling resources
 - Supports metrics-server integration for live CPU/memory usage and GPU monitoring
 - Multi-cloud aware: enriches node metadata for AWS, GCP, and Azure
-- Streams collected data to the Kubeadapt ingestion API using zstd-compressed transport
+- Streams compressed snapshots to the Kubeadapt platform over HTTPS
 
 ## Quick Start
 
@@ -19,7 +19,7 @@ helm install kubeadapt-agent kubeadapt/kubeadapt-agent \
   --set agent.apiKey=<KUBEADAPT_API_KEY>
 ```
 
-The agent requires a `KUBEADAPT_API_KEY` environment variable to authenticate with the ingestion API.
+The agent requires a `KUBEADAPT_API_KEY` environment variable to authenticate with the Kubeadapt backend.
 
 ## Documentation
 
@@ -27,7 +27,7 @@ Full documentation is in the `docs/` directory:
 
 - [Architecture](docs/architecture.md) - how the agent collects and ships metrics
 - [Configuration](docs/configuration.md) - all environment variables and Helm values
-- [Collected Resources](docs/collected-resources.md) - the 22 resource types collected
+- [Collected Resources](docs/collected-resources.md) - full list of collected resource types and fields
 - [Health Endpoints](docs/health-endpoints.md) - liveness and readiness probes
 - [Troubleshooting](docs/troubleshooting.md) - common issues and fixes
 - [Development](docs/development.md) - local setup and contribution guide
