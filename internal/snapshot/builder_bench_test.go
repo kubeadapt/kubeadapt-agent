@@ -224,7 +224,7 @@ func BenchmarkBuild_100Nodes_2000Pods(b *testing.B) {
 	ownerEnricher := enrichment.NewOwnershipEnricher(replicaSets)
 	pipeline := enrichment.NewPipeline(metrics, ownerEnricher)
 
-	builder := NewSnapshotBuilder(s, ms, cfg, metrics, errCollector, pipeline, nil)
+	builder := NewSnapshotBuilder(s, ms, cfg, metrics, errCollector, pipeline, nil, "")
 	ctx := context.Background()
 
 	b.ResetTimer()

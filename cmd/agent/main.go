@@ -21,6 +21,7 @@ import (
 	metricsclientset "k8s.io/metrics/pkg/client/clientset/versioned"
 
 	"github.com/kubeadapt/kubeadapt-agent/internal/agent"
+	"github.com/kubeadapt/kubeadapt-agent/internal/cloud"
 	"github.com/kubeadapt/kubeadapt-agent/internal/collector"
 	"github.com/kubeadapt/kubeadapt-agent/internal/collector/gpu"
 	collectormetrics "github.com/kubeadapt/kubeadapt-agent/internal/collector/metrics"
@@ -92,6 +93,15 @@ func main() {
 		"dcgm_exporter", caps.DCGMExporter,
 		"provider", caps.Provider,
 	)
+
+	cloudMeta := cloud.DetectCloudMetadata(ctx, 5*time.Second)
+	if cloudMeta.Provider != "" {
+		slog.Info("cloud metadata detected",
+			"provider", cloudMeta.Provider,
+			"account_id", cloudMeta.AccountID,
+			"region", cloudMeta.Region,
+		)
+	}
 
 	// 6. Register collectors.
 	registry := collector.NewRegistry()
@@ -168,7 +178,7 @@ func main() {
 		enrichment.NewTargetsEnricher(),
 		enrichment.NewMountsEnricher(),
 	)
-	builder := snapshot.NewSnapshotBuilder(st, ms, &cfg, metrics, errCollector, pipeline, gpuProvider)
+	builder := snapshot.NewSnapshotBuilder(st, ms, &cfg, metrics, errCollector, pipeline, gpuProvider, cloudMeta.AccountID)
 
 	// 8. Create transport and agent.
 	transportClient := transport.NewClient(&cfg, metrics, errCollector)
