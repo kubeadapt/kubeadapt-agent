@@ -42,8 +42,8 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.APIKey != "test-key" {
 		t.Errorf("APIKey = %q, want %q", cfg.APIKey, "test-key")
 	}
-	if cfg.BackendURL != "https://api.kubeadapt.io" {
-		t.Errorf("BackendURL = %q, want %q", cfg.BackendURL, "https://api.kubeadapt.io")
+	if cfg.BackendURL != "https://agent.kubeadapt.io" {
+		t.Errorf("BackendURL = %q, want %q", cfg.BackendURL, "https://agent.kubeadapt.io")
 	}
 	if cfg.SnapshotInterval != 60*time.Second {
 		t.Errorf("SnapshotInterval = %v, want 60s", cfg.SnapshotInterval)
