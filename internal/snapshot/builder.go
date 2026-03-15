@@ -33,6 +33,7 @@ type SnapshotBuilder struct {
 	errorCollector *errors.ErrorCollector
 	pipeline       *enrichment.Pipeline
 	gpuCollector   GPUMetricsProvider
+	cloudAccountID string
 }
 
 // NewSnapshotBuilder creates a SnapshotBuilder with all required dependencies.
@@ -44,6 +45,7 @@ func NewSnapshotBuilder(
 	errCollector *errors.ErrorCollector,
 	pipeline *enrichment.Pipeline,
 	gpuCollector GPUMetricsProvider,
+	cloudAccountID string,
 ) *SnapshotBuilder {
 	return &SnapshotBuilder{
 		store:          store,
@@ -53,6 +55,7 @@ func NewSnapshotBuilder(
 		errorCollector: errCollector,
 		pipeline:       pipeline,
 		gpuCollector:   gpuCollector,
+		cloudAccountID: cloudAccountID,
 	}
 }
 
@@ -105,6 +108,7 @@ func (b *SnapshotBuilder) Build(ctx context.Context) *model.ClusterSnapshot {
 		snap.Provider = deriveProvider(snap.Nodes[0].ProviderID)
 		snap.Region = snap.Nodes[0].Region
 	}
+	snap.CloudAccountID = b.cloudAccountID
 
 	// Step 8: Check for stale resources (no update in >3x snapshot interval).
 	stalenessThreshold := 3 * b.config.SnapshotInterval

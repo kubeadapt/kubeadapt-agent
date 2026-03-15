@@ -11,6 +11,7 @@ type ClusterSnapshot struct {
 	// Provider
 	Provider          string `json:"provider"`
 	Region            string `json:"region"`
+	CloudAccountID    string `json:"cloud_account_id"`
 	KubernetesVersion string `json:"kubernetes_version"`
 
 	// Resources

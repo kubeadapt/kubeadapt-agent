@@ -32,6 +32,7 @@ settings:
     - deps
     - health
     - security
+    - snapshot
     - test
     - build
     - internal

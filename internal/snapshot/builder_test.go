@@ -29,7 +29,7 @@ func newTestDeps() (*store.Store, *store.MetricsStore, *config.Config, *observab
 func TestBuild_ProducesValidSnapshotWithUUID(t *testing.T) {
 	s, ms, cfg, m, ec := newTestDeps()
 	pipeline := enrichment.NewPipeline(m)
-	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil)
+	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil, "")
 
 	snap := builder.Build(context.Background())
 
@@ -60,7 +60,7 @@ func TestBuild_ReadsAllStoresCorrectly(t *testing.T) {
 	s.PVCs.Set("default/pvc1", model.PVCInfo{Name: "pvc1"})
 
 	pipeline := enrichment.NewPipeline(m)
-	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil)
+	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil, "")
 	snap := builder.Build(context.Background())
 
 	assert.Len(t, snap.Nodes, 2)
@@ -92,7 +92,7 @@ func TestBuild_MergesNodeMetrics(t *testing.T) {
 	// n2 has no metrics — should remain nil.
 
 	pipeline := enrichment.NewPipeline(m)
-	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil)
+	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil, "")
 	snap := builder.Build(context.Background())
 
 	// Find n1 and n2 in the snapshot.
@@ -140,7 +140,7 @@ func TestBuild_MergesPodContainerMetrics(t *testing.T) {
 	})
 
 	pipeline := enrichment.NewPipeline(m)
-	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil)
+	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil, "")
 	snap := builder.Build(context.Background())
 
 	require.Len(t, snap.Pods, 1)
@@ -178,7 +178,7 @@ func TestBuild_SummaryCountsMatchSliceLengths(t *testing.T) {
 	s.Deployments.Set("default/d1", model.DeploymentInfo{Name: "d1"})
 
 	pipeline := enrichment.NewPipeline(m)
-	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil)
+	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil, "")
 	snap := builder.Build(context.Background())
 
 	assert.Equal(t, len(snap.Nodes), snap.Summary.NodeCount)
@@ -210,7 +210,7 @@ func TestBuild_SummaryResourceTotals(t *testing.T) {
 	s.PVCs.Set("default/pvc1", model.PVCInfo{Name: "pvc1", RequestedBytes: 50_000_000_000})
 
 	pipeline := enrichment.NewPipeline(m)
-	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil)
+	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil, "")
 	snap := builder.Build(context.Background())
 
 	assert.InDelta(t, 4.0, snap.Summary.TotalCPUCapacity, 0.001)
@@ -230,7 +230,7 @@ func TestBuild_MetricsAvailableFlag(t *testing.T) {
 		s, ms, cfg, m, ec := newTestDeps()
 		s.Nodes.Set("n1", model.NodeInfo{Name: "n1"})
 		pipeline := enrichment.NewPipeline(m)
-		builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil)
+		builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil, "")
 		snap := builder.Build(context.Background())
 		assert.False(t, snap.Summary.MetricsAvailable)
 	})
@@ -240,7 +240,7 @@ func TestBuild_MetricsAvailableFlag(t *testing.T) {
 		s.Nodes.Set("n1", model.NodeInfo{Name: "n1"})
 		ms.NodeMetrics.Set("n1", model.NodeMetrics{Name: "n1", CPUUsageCores: 1.0, MemoryUsageBytes: 1_000_000})
 		pipeline := enrichment.NewPipeline(m)
-		builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil)
+		builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil, "")
 		snap := builder.Build(context.Background())
 		assert.True(t, snap.Summary.MetricsAvailable)
 	})
@@ -249,7 +249,7 @@ func TestBuild_MetricsAvailableFlag(t *testing.T) {
 func TestBuild_EmptyStores(t *testing.T) {
 	s, ms, cfg, m, ec := newTestDeps()
 	pipeline := enrichment.NewPipeline(m)
-	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil)
+	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil, "")
 	snap := builder.Build(context.Background())
 
 	assert.NotEmpty(t, snap.SnapshotID)
@@ -303,7 +303,7 @@ func TestBuild_MergesGPUNodeMetrics(t *testing.T) {
 	}
 
 	pipeline := enrichment.NewPipeline(m)
-	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, gpuMock)
+	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, gpuMock, "")
 	snap := builder.Build(context.Background())
 
 	var n1, n2 *model.NodeInfo
@@ -361,7 +361,7 @@ func TestBuild_MergesGPUContainerMetrics(t *testing.T) {
 	}
 
 	pipeline := enrichment.NewPipeline(m)
-	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, gpuMock)
+	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, gpuMock, "")
 	snap := builder.Build(context.Background())
 
 	require.Len(t, snap.Pods, 1)
@@ -383,7 +383,7 @@ func TestBuild_NilGPUCollector_NoError(t *testing.T) {
 	s, ms, cfg, m, ec := newTestDeps()
 	s.Nodes.Set("n1", model.NodeInfo{Name: "n1"})
 	pipeline := enrichment.NewPipeline(m)
-	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil)
+	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil, "")
 	snap := builder.Build(context.Background())
 	require.NotNil(t, snap)
 	assert.Nil(t, snap.Nodes[0].GPUUtilizationPercent)
@@ -405,9 +405,29 @@ func TestBuild_EnrichmentPipelineRuns(t *testing.T) {
 	s, ms, cfg, m, ec := newTestDeps()
 	mock := &mockEnricher{name: "test-enricher"}
 	pipeline := enrichment.NewPipeline(m, mock)
-	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil)
+	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil, "")
 
 	_ = builder.Build(context.Background())
 
 	assert.True(t, mock.called, "enricher should have been called during Build")
+}
+
+func TestBuild_SetsCloudAccountID(t *testing.T) {
+	s, ms, cfg, m, ec := newTestDeps()
+	pipeline := enrichment.NewPipeline(m)
+	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil, "123456789012")
+
+	snap := builder.Build(context.Background())
+
+	assert.Equal(t, "123456789012", snap.CloudAccountID)
+}
+
+func TestBuild_EmptyCloudAccountID(t *testing.T) {
+	s, ms, cfg, m, ec := newTestDeps()
+	pipeline := enrichment.NewPipeline(m)
+	builder := NewSnapshotBuilder(s, ms, cfg, m, ec, pipeline, nil, "")
+
+	snap := builder.Build(context.Background())
+
+	assert.Empty(t, snap.CloudAccountID)
 }
