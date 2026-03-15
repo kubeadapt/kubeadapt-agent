@@ -46,7 +46,7 @@ type Config struct {
 func Load() Config {
 	cfg := Config{
 		APIKey:               envOrFallback("KUBEADAPT_API_KEY", "KUBEADAPT_AGENT_TOKEN"),
-		BackendURL:           envOrFallbackOrDefault("KUBEADAPT_BACKEND_URL", "KUBEADAPT_BACKEND_API_ENDPOINT", "https://api.kubeadapt.io"),
+		BackendURL:           envOrFallbackOrDefault("KUBEADAPT_BACKEND_URL", "KUBEADAPT_BACKEND_API_ENDPOINT", "https://agent.kubeadapt.io"),
 		SnapshotInterval:     parseDuration("KUBEADAPT_SNAPSHOT_INTERVAL", 60*time.Second),
 		MetricsInterval:      parseDuration("KUBEADAPT_METRICS_INTERVAL", 60*time.Second),
 		InformerResyncPeriod: parseDuration("KUBEADAPT_INFORMER_RESYNC", 300*time.Second),
