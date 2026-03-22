@@ -25,6 +25,7 @@ type CustomWorkloadInfo struct {
 // NodePoolInfo represents a Karpenter NodePool.
 type NodePoolInfo struct {
 	Name              string                    `json:"name"`
+	UID               string                    `json:"uid"`
 	MinReplicas       *int                      `json:"min_replicas,omitempty"`
 	MaxReplicas       *int                      `json:"max_replicas,omitempty"`
 	NodeClassName     string                    `json:"node_class_name"`
