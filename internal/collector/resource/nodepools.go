@@ -129,6 +129,7 @@ func (c *NodePoolCollector) IsHealthy() (bool, string) {
 func nodePoolToModel(obj *unstructured.Unstructured) model.NodePoolInfo {
 	info := model.NodePoolInfo{
 		Name:              obj.GetName(),
+		UID:               string(obj.GetUID()),
 		Labels:            obj.GetLabels(),
 		Annotations:       obj.GetAnnotations(),
 		CreationTimestamp: obj.GetCreationTimestamp().UnixMilli(),
