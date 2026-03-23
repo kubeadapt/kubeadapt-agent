@@ -21,6 +21,7 @@ type Config struct {
 	BufferMaxBytes       int64
 	HealthPort           int
 	AgentVersion         string
+	KubernetesVersion    string
 
 	// Kubernetes pod metadata (injected via Helm downward API)
 	ChartVersion    string // KUBEADAPT_CHART_VERSION

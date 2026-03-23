@@ -94,6 +94,12 @@ func main() {
 		"provider", caps.Provider,
 	)
 
+	if serverInfo, vErr := kubeClient.Discovery().ServerVersion(); vErr != nil {
+		slog.Warn("failed to detect kubernetes version", "error", vErr)
+	} else {
+		cfg.KubernetesVersion = serverInfo.GitVersion
+	}
+
 	cloudMeta := cloud.DetectCloudMetadata(ctx, 5*time.Second)
 	if cloudMeta.Provider != "" {
 		slog.Info("cloud metadata detected",

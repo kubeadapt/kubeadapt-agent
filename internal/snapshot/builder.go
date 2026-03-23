@@ -103,6 +103,7 @@ func (b *SnapshotBuilder) Build(ctx context.Context) *model.ClusterSnapshot {
 	snap.SnapshotID = uuid.New().String()
 	snap.Timestamp = time.Now().UnixMilli()
 	snap.AgentVersion = b.config.AgentVersion
+	snap.KubernetesVersion = b.config.KubernetesVersion
 
 	if len(snap.Nodes) > 0 {
 		snap.Provider = deriveProvider(snap.Nodes[0].ProviderID)
