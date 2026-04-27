@@ -31,6 +31,8 @@ func ComputeSummary(snapshot *model.ClusterSnapshot) model.ClusterSummary {
 			s.PendingPodCount++
 		case "Failed":
 			s.FailedPodCount++
+		case "Succeeded":
+			s.SucceededPodCount++
 		}
 		s.ContainerCount += len(pod.Containers)
 	}

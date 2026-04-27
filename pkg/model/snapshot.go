@@ -61,6 +61,7 @@ type ClusterSummary struct {
 	RunningPodCount     int `json:"running_pod_count"`
 	PendingPodCount     int `json:"pending_pod_count"`
 	FailedPodCount      int `json:"failed_pod_count"`
+	SucceededPodCount   int `json:"succeeded_pod_count"`
 	NamespaceCount      int `json:"namespace_count"`
 	DeploymentCount     int `json:"deployment_count"`
 	StatefulSetCount    int `json:"statefulset_count"`
