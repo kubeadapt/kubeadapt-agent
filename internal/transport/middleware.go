@@ -160,7 +160,9 @@ func drainAndClose(body io.ReadCloser) {
 	body.Close()
 }
 
-// ParseResponse reads an HTTP response and returns the appropriate result or error.
+// ParseResponse decodes the HTTP response or returns a categorized error.
+// Error message prefixes ("authentication failed", "protocol mismatch", etc.)
+// are load-bearing — isNonRetryableError in client.go matches on them.
 func ParseResponse(resp *http.Response) (*model.SnapshotResponse, error) {
 	defer drainAndClose(resp.Body)
 
@@ -176,6 +178,7 @@ func ParseResponse(resp *http.Response) (*model.SnapshotResponse, error) {
 		return nil, fmt.Errorf("transport: authentication failed (HTTP %d)", resp.StatusCode)
 
 	case resp.StatusCode == http.StatusPaymentRequired:
+		// 402 may be deprecated server-side in favor of 429; kept for back-compat.
 		var errResp model.SnapshotErrorResponse
 		if err := json.NewDecoder(resp.Body).Decode(&errResp); err == nil {
 			msg := errResp.Message
@@ -186,8 +189,24 @@ func ParseResponse(resp *http.Response) (*model.SnapshotResponse, error) {
 		}
 		return nil, fmt.Errorf("transport: quota exceeded (HTTP 402)")
 
+	case resp.StatusCode == http.StatusNotFound:
+		// Pre-filter rejects when X-Kubeadapt-Protocol is missing or wrong.
+		return nil, fmt.Errorf("transport: protocol mismatch (HTTP 404) — check X-Kubeadapt-Protocol header and backend URL")
+
 	case resp.StatusCode == http.StatusGone:
 		return nil, fmt.Errorf("transport: agent deprecated (HTTP 410)")
+
+	case resp.StatusCode == http.StatusLengthRequired:
+		// 411: agent bug — Content-Length missing (likely chunked body).
+		return nil, fmt.Errorf("transport: length required (HTTP 411) — agent misconfigured, Content-Length missing")
+
+	case resp.StatusCode == http.StatusRequestEntityTooLarge:
+		// 413: exceeds server compressed-body cap; reduce scope or raise cap.
+		return nil, fmt.Errorf("transport: payload too large (HTTP 413) — snapshot exceeds server compressed-body cap")
+
+	case resp.StatusCode == http.StatusUnsupportedMediaType:
+		// 415: Content-Encoding != zstd; agent bug or middleware stripped header.
+		return nil, fmt.Errorf("transport: unsupported encoding (HTTP 415) — server requires Content-Encoding: zstd")
 
 	case resp.StatusCode == http.StatusTooManyRequests:
 		return nil, fmt.Errorf("transport: rate limited (HTTP 429)")

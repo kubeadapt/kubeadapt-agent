@@ -23,6 +23,10 @@ type Config struct {
 	AgentVersion         string
 	KubernetesVersion    string
 
+	// MaxCompressedBodyBytes mirrors the server's MAX_COMPRESSED_BODY_SIZE; oversize
+	// snapshots fail locally with ErrPayloadTooLarge. Both sides must agree.
+	MaxCompressedBodyBytes int64
+
 	// Kubernetes pod metadata (injected via Helm downward API)
 	ChartVersion    string // KUBEADAPT_CHART_VERSION
 	HelmReleaseName string // HELM_RELEASE_NAME
@@ -57,6 +61,8 @@ func Load() Config {
 		RequestTimeout:       parseDuration("KUBEADAPT_REQUEST_TIMEOUT", 30*time.Second),
 		BufferMaxBytes:       parseInt64("KUBEADAPT_BUFFER_MAX_BYTES", 52428800),
 		HealthPort:           parseInt("KUBEADAPT_HEALTH_PORT", 8080),
+		// Must match server's MAX_COMPRESSED_BODY_SIZE or the smaller value wins.
+		MaxCompressedBodyBytes: parseInt64("KUBEADAPT_MAX_COMPRESSED_BODY_BYTES", 52428800),
 	}
 
 	cfg.ChartVersion = os.Getenv("KUBEADAPT_CHART_VERSION")
