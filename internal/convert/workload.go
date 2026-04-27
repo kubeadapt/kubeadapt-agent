@@ -91,6 +91,10 @@ func StatefulSetToModel(ss *appsv1.StatefulSet) model.StatefulSetInfo {
 		info.Selector = ss.Spec.Selector.MatchLabels
 	}
 
+	if ss.Spec.UpdateStrategy.RollingUpdate != nil && ss.Spec.UpdateStrategy.RollingUpdate.Partition != nil {
+		info.Partition = ss.Spec.UpdateStrategy.RollingUpdate.Partition
+	}
+
 	// VolumeClaimTemplates — extract names
 	if len(ss.Spec.VolumeClaimTemplates) > 0 {
 		vcts := make([]string, len(ss.Spec.VolumeClaimTemplates))
@@ -119,6 +123,8 @@ func DaemonSetToModel(ds *appsv1.DaemonSet) model.DaemonSetInfo {
 		NumberReady:            ds.Status.NumberReady,
 		NumberMisscheduled:     ds.Status.NumberMisscheduled,
 		UpdatedNumberScheduled: ds.Status.UpdatedNumberScheduled,
+		NumberUnavailable:      ds.Status.NumberUnavailable,
+		NumberAvailable:        ds.Status.NumberAvailable,
 		Strategy:               string(ds.Spec.UpdateStrategy.Type),
 
 		ContainerSpecs: extractContainerSpecs(ds.Spec.Template.Spec.Containers),

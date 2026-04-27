@@ -60,6 +60,8 @@ type StatefulSetInfo struct {
 	Annotations       map[string]string `json:"annotations"`
 	CreationTimestamp int64             `json:"creation_timestamp"`
 
+	Partition *int32 `json:"partition,omitempty"`
+
 	Conditions []WorkloadConditionInfo `json:"conditions"`
 }
 
@@ -73,6 +75,8 @@ type DaemonSetInfo struct {
 	NumberReady            int32  `json:"number_ready"`
 	NumberMisscheduled     int32  `json:"number_misscheduled"`
 	UpdatedNumberScheduled int32  `json:"updated_number_scheduled"`
+	NumberUnavailable      int32  `json:"number_unavailable"`
+	NumberAvailable        int32  `json:"number_available"`
 	Strategy               string `json:"strategy"`
 
 	TotalCPURequest    float64  `json:"total_cpu_request"`
