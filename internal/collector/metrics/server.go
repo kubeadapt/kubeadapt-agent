@@ -143,8 +143,7 @@ func (c *MetricsCollector) pollNodeMetrics(ctx context.Context) {
 	nodeMetricsList, err := c.api.ListNodeMetrics(ctx)
 	if err != nil {
 		c.pollFailed.Add(1)
-		c.metricsStore.NodeMetrics.Clear()
-		slog.Error("failed to list node metrics", "error", err)
+		slog.Warn("failed to list node metrics, keeping stale data", "error", err)
 		return
 	}
 
@@ -164,8 +163,7 @@ func (c *MetricsCollector) pollPodMetrics(ctx context.Context) {
 	podMetricsList, err := c.api.ListPodMetrics(ctx)
 	if err != nil {
 		c.pollFailed.Add(1)
-		c.metricsStore.PodMetrics.Clear()
-		slog.Error("failed to list pod metrics", "error", err)
+		slog.Warn("failed to list pod metrics, keeping stale data", "error", err)
 		return
 	}
 
