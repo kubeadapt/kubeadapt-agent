@@ -91,10 +91,7 @@ func (c *ReplicaSetCollector) Start(_ context.Context) error {
 		return fmt.Errorf("%s: add event handler: %w", c.Name(), err)
 	}
 
-	go func() {
-		c.informer.Run(c.stopCh)
-		close(c.done)
-	}()
+	runInformerWithRecovery(c.informer, c.Name(), c.stopCh, c.done)
 	return nil
 }
 
