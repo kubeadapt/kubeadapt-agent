@@ -29,6 +29,9 @@ func (a *AggregationEnricher) Enrich(snapshot *model.ClusterSnapshot) error {
 		if pod.OwnerKind == "" {
 			continue
 		}
+		if pod.Phase == "Succeeded" || pod.Phase == "Failed" {
+			continue
+		}
 		key := workloadKey{
 			namespace: pod.Namespace,
 			kind:      pod.OwnerKind,

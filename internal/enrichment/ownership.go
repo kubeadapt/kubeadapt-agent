@@ -31,10 +31,11 @@ func (o *OwnershipEnricher) Name() string { return "ownership" }
 func (o *OwnershipEnricher) Enrich(snapshot *model.ClusterSnapshot) error {
 	rsMap := o.buildReplicaSetMap()
 	jobMap := buildJobMap(snapshot.Jobs)
+	cronJobMap := buildCronJobMap(snapshot.CronJobs)
 
 	for i := range snapshot.Pods {
 		pod := &snapshot.Pods[i]
-		o.resolveOwner(pod, rsMap, jobMap)
+		o.resolveOwner(pod, rsMap, jobMap, cronJobMap)
 	}
 	return nil
 }
@@ -59,12 +60,23 @@ func buildJobMap(jobs []model.JobInfo) map[string]model.JobInfo {
 	return m
 }
 
+// buildCronJobMap indexes CronJobs by "namespace/name" for UID lookup.
+func buildCronJobMap(cronJobs []model.CronJobInfo) map[string]model.CronJobInfo {
+	m := make(map[string]model.CronJobInfo, len(cronJobs))
+	for _, cj := range cronJobs {
+		key := fmt.Sprintf("%s/%s", cj.Namespace, cj.Name)
+		m[key] = cj
+	}
+	return m
+}
+
 // resolveOwner walks the ownership chain for a pod, stopping at the
 // top-level owner or after maxOwnerDepth hops to prevent infinite loops.
 func (o *OwnershipEnricher) resolveOwner(
 	pod *model.PodInfo,
 	rsMap map[string]model.ReplicaSetInfo,
 	jobMap map[string]model.JobInfo,
+	cronJobMap map[string]model.CronJobInfo,
 ) {
 	if pod.OwnerKind == "" {
 		return // orphan pod
@@ -107,7 +119,10 @@ func (o *OwnershipEnricher) resolveOwner(
 			}
 			kind = "CronJob"
 			name = job.OwnerCronJob
-			uid = "" // CronJob UID not stored on JobInfo
+			cjKey := fmt.Sprintf("%s/%s", ns, job.OwnerCronJob)
+			if cj, ok := cronJobMap[cjKey]; ok {
+				uid = cj.UID
+			}
 			resolved = true
 		}
 
