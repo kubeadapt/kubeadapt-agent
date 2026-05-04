@@ -386,7 +386,8 @@ func convertPDBConditions(conditions []metav1.Condition) []model.PDBConditionInf
 
 // JobToModel converts a Kubernetes Job to model.JobInfo.
 // Pure function — no side effects.
-// TotalCPU/Memory fields are left at zero (populated by enrichment later).
+// TotalCPU/Memory fields are left at zero (populated by enrichment later);
+// ContainerSpecs gives enrichment a fallback when no live pods remain.
 func JobToModel(job *batchv1.Job) model.JobInfo {
 	info := model.JobInfo{
 		Name:      job.Name,
@@ -402,6 +403,8 @@ func JobToModel(job *batchv1.Job) model.JobInfo {
 		Active:    job.Status.Active,
 		Succeeded: job.Status.Succeeded,
 		Failed:    job.Status.Failed,
+
+		ContainerSpecs: extractContainerSpecs(job.Spec.Template.Spec.Containers),
 
 		Labels:            job.Labels,
 		Annotations:       FilterAnnotations(job.Annotations),

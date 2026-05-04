@@ -217,3 +217,88 @@ func makePod(name, ns, ownerKind, ownerName string, cpuReq float64, memReq int64
 		}},
 	}
 }
+
+func TestAggregation_DeploymentExcludesSucceededPods(t *testing.T) {
+	running := makePod("web-1", "default", "Deployment", "web", 0.5, 256*1024*1024, 1.0, 512*1024*1024)
+	running.Phase = "Running"
+	completed := makePod("web-old", "default", "Deployment", "web", 0.5, 256*1024*1024, 1.0, 512*1024*1024)
+	completed.Phase = "Succeeded"
+
+	snap := &model.ClusterSnapshot{
+		Deployments: []model.DeploymentInfo{{Name: "web", Namespace: "default"}},
+		Pods:        []model.PodInfo{running, completed},
+	}
+	if err := NewAggregationEnricher().Enrich(snap); err != nil {
+		t.Fatal(err)
+	}
+	if got := snap.Deployments[0].TotalCPURequest; got != 0.5 {
+		t.Errorf("Deployment must exclude Succeeded pods: got TotalCPURequest=%f, want 0.5", got)
+	}
+}
+
+func TestAggregation_JobIncludesSucceededPods(t *testing.T) {
+	completed := makePod("backup-12345", "default", "Job", "backup", 1.0, 1024*1024*1024, 2.0, 2*1024*1024*1024)
+	completed.Phase = "Succeeded"
+
+	snap := &model.ClusterSnapshot{
+		Jobs: []model.JobInfo{{Name: "backup", Namespace: "default"}},
+		Pods: []model.PodInfo{completed},
+	}
+	if err := NewAggregationEnricher().Enrich(snap); err != nil {
+		t.Fatal(err)
+	}
+	if got := snap.Jobs[0].TotalCPURequest; got != 1.0 {
+		t.Errorf("Job must include Succeeded pods: got TotalCPURequest=%f, want 1.0", got)
+	}
+	if got := snap.Jobs[0].TotalMemoryRequest; got != 1024*1024*1024 {
+		t.Errorf("Job TotalMemoryRequest=%d, want %d", got, 1024*1024*1024)
+	}
+}
+
+func TestAggregation_JobFallsBackToContainerSpecsWhenNoPods(t *testing.T) {
+	snap := &model.ClusterSnapshot{
+		Jobs: []model.JobInfo{{
+			Name:      "ttl-evicted",
+			Namespace: "default",
+			ContainerSpecs: []model.ContainerSpecInfo{{
+				CPURequestCores:    0.25,
+				MemoryRequestBytes: 128 * 1024 * 1024,
+			}, {
+				CPURequestCores:    0.75,
+				MemoryRequestBytes: 256 * 1024 * 1024,
+			}},
+		}},
+	}
+	if err := NewAggregationEnricher().Enrich(snap); err != nil {
+		t.Fatal(err)
+	}
+	j := snap.Jobs[0]
+	if j.TotalCPURequest != 1.0 {
+		t.Errorf("spec-fallback CPU: got %f, want 1.0", j.TotalCPURequest)
+	}
+	if j.TotalMemoryRequest != (128+256)*1024*1024 {
+		t.Errorf("spec-fallback memory: got %d, want %d", j.TotalMemoryRequest, (128+256)*1024*1024)
+	}
+}
+
+func TestAggregation_JobLivePodsTrumpSpecFallback(t *testing.T) {
+	live := makePod("hot-pod", "default", "Job", "hot", 2.0, 512*1024*1024, 0, 0)
+	live.Phase = "Running"
+	snap := &model.ClusterSnapshot{
+		Jobs: []model.JobInfo{{
+			Name:      "hot",
+			Namespace: "default",
+			ContainerSpecs: []model.ContainerSpecInfo{{
+				CPURequestCores:    99,
+				MemoryRequestBytes: 99 * 1024 * 1024 * 1024,
+			}},
+		}},
+		Pods: []model.PodInfo{live},
+	}
+	if err := NewAggregationEnricher().Enrich(snap); err != nil {
+		t.Fatal(err)
+	}
+	if got := snap.Jobs[0].TotalCPURequest; got != 2.0 {
+		t.Errorf("live aggregate must win over spec fallback: got %f, want 2.0", got)
+	}
+}

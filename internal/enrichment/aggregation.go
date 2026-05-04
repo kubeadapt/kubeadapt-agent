@@ -17,8 +17,9 @@ func NewAggregationEnricher() *AggregationEnricher {
 func (a *AggregationEnricher) Name() string { return "aggregation" }
 
 // Enrich aggregates pod resources into workload totals.
+// Long-running workloads exclude Succeeded/Failed pods; batch workloads
+// (Job/CronJob) include them so completed work still has a request total.
 func (a *AggregationEnricher) Enrich(snapshot *model.ClusterSnapshot) error {
-	// Index pods by namespace+ownerKind+ownerName.
 	type workloadKey struct {
 		namespace string
 		kind      string
@@ -29,7 +30,8 @@ func (a *AggregationEnricher) Enrich(snapshot *model.ClusterSnapshot) error {
 		if pod.OwnerKind == "" {
 			continue
 		}
-		if pod.Phase == "Succeeded" || pod.Phase == "Failed" {
+		if !isBatchOwnerKind(pod.OwnerKind) &&
+			(pod.Phase == "Succeeded" || pod.Phase == "Failed") {
 			continue
 		}
 		key := workloadKey{
@@ -82,12 +84,16 @@ func (a *AggregationEnricher) Enrich(snapshot *model.ClusterSnapshot) error {
 		ds.TotalMemoryUsage = memUse
 	}
 
-	// Aggregate Jobs.
+	// Aggregate Jobs. Fall back to the Job's spec template when no live
+	// pods remain (e.g. TTL-deleted) so requests don't drop to zero.
 	for i := range snapshot.Jobs {
 		j := &snapshot.Jobs[i]
 		key := workloadKey{namespace: j.Namespace, kind: "Job", name: j.Name}
 		pods := podsByWorkload[key]
 		cpu, mem, _, _, cpuUse, memUse := sumPodResources(pods)
+		if cpu == 0 && mem == 0 && len(j.ContainerSpecs) > 0 {
+			cpu, mem = sumContainerSpecRequests(j.ContainerSpecs)
+		}
 		j.TotalCPURequest = cpu
 		j.TotalMemoryRequest = mem
 		j.TotalCPUUsage = cpuUse
@@ -95,6 +101,18 @@ func (a *AggregationEnricher) Enrich(snapshot *model.ClusterSnapshot) error {
 	}
 
 	return nil
+}
+
+func sumContainerSpecRequests(specs []model.ContainerSpecInfo) (cpu float64, mem int64) {
+	for _, c := range specs {
+		cpu += c.CPURequestCores
+		mem += c.MemoryRequestBytes
+	}
+	return
+}
+
+func isBatchOwnerKind(ownerKind string) bool {
+	return ownerKind == "Job" || ownerKind == "CronJob"
 }
 
 // sumPodResources totals resource requests, limits, and usage across all

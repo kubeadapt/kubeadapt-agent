@@ -26,6 +26,8 @@ type JobInfo struct {
 	TotalCPUUsage      *float64 `json:"total_cpu_usage,omitempty"`
 	TotalMemoryUsage   *int64   `json:"total_memory_usage,omitempty"`
 
+	ContainerSpecs []ContainerSpecInfo `json:"container_specs"`
+
 	Labels            map[string]string  `json:"labels"`
 	Annotations       map[string]string  `json:"annotations"`
 	CreationTimestamp int64              `json:"creation_timestamp"`
