@@ -16,6 +16,7 @@ type Metrics struct {
 	SnapshotSendDuration  prometheus.Histogram
 	SnapshotSizeBytes     *prometheus.HistogramVec
 	SnapshotSendTotal     *prometheus.CounterVec
+	OrphanPodNodeRefs     prometheus.Counter
 
 	// Informer metrics
 	InformerEventsTotal *prometheus.CounterVec
@@ -73,6 +74,10 @@ func NewMetrics() *Metrics {
 			Name: "kubeadapt_agent_snapshot_send_total",
 			Help: "Total number of snapshot send attempts.",
 		}, []string{"status"}),
+		OrphanPodNodeRefs: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "kubeadapt_agent_orphan_pod_node_refs_total",
+			Help: "Total pod-to-node references where the node was missing from the snapshot after backfill.",
+		}),
 
 		InformerEventsTotal: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "kubeadapt_agent_informer_events_total",
@@ -127,6 +132,7 @@ func NewMetrics() *Metrics {
 		m.SnapshotSendDuration,
 		m.SnapshotSizeBytes,
 		m.SnapshotSendTotal,
+		m.OrphanPodNodeRefs,
 		m.InformerEventsTotal,
 		m.StoreItems,
 		m.EnricherDuration,

@@ -84,6 +84,10 @@ func (b *SnapshotBuilder) Build(ctx context.Context) *model.ClusterSnapshot {
 		mergeGPUContainerMetrics(snap.Pods, gpuMetrics)
 	}
 
+	// Step 3c: Backfill nodes referenced by pods but missing from the
+	// live node set (concurrent reads in Step 1 can race a node deletion).
+	b.backfillReferencedNodes(snap)
+
 	// Step 4: Resolve ownership (ReplicaSet → Deployment, Job → CronJob)
 	// before the main pipeline so aggregation uses top-level owners.
 	ownershipEnricher := enrichment.NewOwnershipEnricher(replicaSets)
@@ -163,6 +167,55 @@ func (b *SnapshotBuilder) readStores(snap *model.ClusterSnapshot) []model.Replic
 
 	wg.Wait()
 	return replicaSets
+}
+
+// backfillReferencedNodes adds nodes referenced by pods but missing from
+// snap.Nodes by re-reading the node store. Remaining orphans are logged
+// and counted on metrics.OrphanPodNodeRefs.
+func (b *SnapshotBuilder) backfillReferencedNodes(snap *model.ClusterSnapshot) {
+	if len(snap.Pods) == 0 {
+		return
+	}
+	present := make(map[string]struct{}, len(snap.Nodes))
+	for _, n := range snap.Nodes {
+		present[n.Name] = struct{}{}
+	}
+	referenced := make(map[string]struct{})
+	for _, p := range snap.Pods {
+		if p.NodeName == "" {
+			continue
+		}
+		if _, ok := present[p.NodeName]; ok {
+			continue
+		}
+		referenced[p.NodeName] = struct{}{}
+	}
+	if len(referenced) == 0 {
+		return
+	}
+	storeNodes := b.store.Nodes.Values()
+	storeIndex := make(map[string]model.NodeInfo, len(storeNodes))
+	for _, n := range storeNodes {
+		storeIndex[n.Name] = n
+	}
+	var stillOrphan []string
+	for name := range referenced {
+		if n, ok := storeIndex[name]; ok {
+			snap.Nodes = append(snap.Nodes, n)
+			present[name] = struct{}{}
+			continue
+		}
+		stillOrphan = append(stillOrphan, name)
+	}
+	if len(stillOrphan) > 0 {
+		slog.Warn("pods reference nodes missing from snapshot",
+			"orphan_node_count", len(stillOrphan),
+			"orphan_node_sample", stillOrphan[:min(5, len(stillOrphan))],
+		)
+		if b.metrics != nil && b.metrics.OrphanPodNodeRefs != nil {
+			b.metrics.OrphanPodNodeRefs.Add(float64(len(stillOrphan)))
+		}
+	}
 }
 
 // mergeNodeMetrics sets CPU and memory usage on nodes from metrics-server data.
